@@ -1,18 +1,13 @@
  {
   "schema_version": "0.1",
-  "description": "Registry of allowed action types for the Execution Layer – skeleton only.",
-  "actions": [
-    {
-      "id": "LOG_NOTE",
-      "category": "logging",
-      "description": "Record a non-sensitive note in the execution logs.",
+  "actions": {
+    "PING": {
+      "description": "No-op diagnostic action for Layer 4 skeleton.",
       "enabled": true
     },
-    {
-      "id": "NO_OP",
-      "category": "control",
-      "description": "Explicitly do nothing – used for dry-run and safety.",
+    "LOG_SUMMARY": {
+      "description": "Placeholder for a future log summarization action.",
       "enabled": true
     }
-  ]
+  }
 }

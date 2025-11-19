@@ -14,6 +14,8 @@ from layer2_governance_matrix.L2_governance_static_stub import load_governance_s
 
 from layer3_decision_engine.L3_decision_matrix_stub import load_decision_engine_status
 
+from layer4_execution.L4_executor_stub import load_execution_status
+
 from pprint import pprint
 
 from utils import get_guardian_logger
@@ -62,6 +64,10 @@ def main() -> None:
     decision_status = load_decision_engine_status()
     pprint(decision_status.__dict__)
 
+    # Layer 4 – Execution Layer
+    print_header("Layer 4 – Execution Layer Status")
+    l4_status = load_execution_status()
+    pprint(l4_status.__dict__)
 
 if __name__ == "__main__":
     main()
