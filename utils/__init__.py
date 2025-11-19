@@ -1,21 +1,13 @@
-"""
-GUS v4 utils package – skeleton only.
+from __future__ import annotations
 
-Provides small, generic helpers for:
-- hashing text/files
-- loading JSON config files
-- getting a basic logger
-
-No GUS-specific logic is implemented at this stage.
-"""
-
-from .hash_tools_stub import compute_sha256, compute_file_sha256  # re-export
 from .config_loader_stub import load_json_config
 from .guardian_logging_stub import get_guardian_logger
+from .hash_tools_stub import sha256_hex, hash_text, hash_file
 
 __all__ = [
-    "compute_sha256",
-    "compute_file_sha256",
     "load_json_config",
     "get_guardian_logger",
+    "sha256_hex",
+    "hash_text",
+    "hash_file",
 ]

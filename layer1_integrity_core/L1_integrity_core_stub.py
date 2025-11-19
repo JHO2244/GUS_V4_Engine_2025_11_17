@@ -1,130 +1,114 @@
-# Placeholder for integrity checks
-"""
-GUS v4 – Layer 1 Integrity Core stub.
-
-Responsibility (skeleton mode):
-- Load integrity configuration (JSON).
-- Verify that the hash spine module + log path are present.
-- Provide a simple IntegrityStatus snapshot to higher layers.
-
-No real hash-chain logic is implemented here yet.
-"""
-
 from __future__ import annotations
 
-from dataclasses import dataclass
-from importlib import import_module
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, Tuple
 
 from utils import load_json_config, get_guardian_logger
+from .chain import gus_chain_v4_stub
 
-BASE_DIR = Path(__file__).resolve().parent
-CONFIG_PATH = BASE_DIR / "L1_integrity_config.json"
 
 logger = get_guardian_logger("GUSv4.Layer1")
 
+INTEGRITY_CONFIG_FILENAME = "L1_integrity_config.json"
 
-@dataclass
-class IntegrityStatus:
+
+def _get_integrity_config_path() -> Path:
+    return Path(__file__).resolve().with_name(INTEGRITY_CONFIG_FILENAME)
+
+
+def load_integrity_status() -> Dict[str, Any]:
     """
-    Minimal status snapshot for Layer 1 – Integrity Core.
+    Load integrity configuration and basic chain status.
+    This is read-only and does not mutate the chain.
     """
-    config_loaded: bool
-    chain_module_path: Optional[str]
-    chain_log_path: Optional[Path]
-    chain_module_imported: bool
-    chain_log_path_exists: bool
-    errors: List[str]
+    errors = []
+    config_loaded = False
+    chain_module_imported = False
+    chain_log_path: Path | None = None
+    chain_module_path = "layer1_integrity_core.chain.gus_chain_v4_stub"
 
-
-def _load_config() -> Optional[dict]:
-    """
-    Internal helper: load the integrity config JSON.
-    Returns None on failure.
-    """
-    return load_json_config(CONFIG_PATH)
-
-
-def load_integrity_status() -> IntegrityStatus:
-    """
-    Load the integrity configuration and perform basic structural checks.
-
-    Skeleton checks:
-    - Can we read the config JSON?
-    - Does the declared chain module import?
-    - Does the declared chain log path exist?
-
-    We only log and return a status object; no exceptions are raised.
-    """
-    errors: List[str] = []
-
-    config = _load_config()
-    if config is None:
-        errors.append("Failed to load L1_integrity_config.json.")
-        # safe defaults
-        chain_module_path: Optional[str] = None
-        chain_log_path: Optional[Path] = None
-        config_loaded = False
-        chain_module_imported = False
-        chain_log_exists = False
-    else:
+    # 1) Load config
+    try:
+        cfg_path = _get_integrity_config_path()
+        cfg: Dict[str, Any] = load_json_config(cfg_path)
         config_loaded = True
+    except Exception as exc:
+        cfg = {}
+        errors.append(f"config_error: {exc!r}")
 
-        chain_module_path = config.get(
-            "chain_module", "layer1_integrity_core.chain.gus_chain_v4_stub"
-        )
-        raw_log_path = config.get(
-            "chain_log_file", "layer1_integrity_core/chain/gus_chain_log_placeholder.txt"
-        )
-        chain_log_path = (BASE_DIR.parent / raw_log_path).resolve()
+    # 2) Resolve chain log path (from config or default)
+    try:
+        chain_log_str = cfg.get("chain_log_path") if config_loaded else None
+        if chain_log_str:
+            chain_log_path = Path(chain_log_str).resolve()
+        else:
+            chain_log_path = gus_chain_v4_stub.get_default_chain_log_path()
+    except Exception as exc:
+        errors.append(f"chain_log_path_error: {exc!r}")
 
-        # Try to import the chain module
-        try:
-            import_module(chain_module_path)
-            chain_module_imported = True
-        except Exception as exc:  # noqa: BLE001
-            chain_module_imported = False
-            errors.append(f"Failed to import chain module '{chain_module_path}': {exc!r}")
+    # 3) Chain module import status (already imported as gus_chain_v4_stub)
+    try:
+        _ = gus_chain_v4_stub
+        chain_module_imported = True
+    except Exception as exc:
+        errors.append(f"chain_import_error: {exc!r}")
 
-        # Check log path existence (non-fatal)
-        chain_log_exists = chain_log_path.exists()
-        if not chain_log_exists:
-            errors.append(f"Chain log file does not exist at '{chain_log_path}'.")
+    status: Dict[str, Any] = {
+        "config_loaded": config_loaded,
+        "chain_module_imported": chain_module_imported,
+        "chain_module_path": chain_module_path,
+        "chain_log_path": chain_log_path,
+        "chain_log_path_exists": bool(chain_log_path and chain_log_path.exists()),
+        "errors": errors,
+    }
 
     if errors:
-        logger.warning("Integrity Layer status loaded with issues: %s", "; ".join(errors))
+        logger.warning(
+            "Integrity Layer status loaded with warnings: %s",
+            errors,
+        )
     else:
-        logger.info("Integrity Layer status loaded successfully (config + chain).")
+        logger.info(
+            "Integrity Layer status loaded successfully (config + chain)."
+        )
 
-    return IntegrityStatus(
-        config_loaded=config_loaded,
-        chain_module_path=chain_module_path,
-        chain_log_path=chain_log_path,
-        chain_module_imported=chain_module_imported,
-        chain_log_path_exists=chain_log_exists,
-        errors=errors,
-    )
+    return status
+
+
+def _verify_chain_from_status(status: Dict[str, Any]) -> Tuple[bool, list[str]]:
+    """
+    Internal helper: run hash-chain verification based on a status dict.
+    """
+    errors: list[str] = list(status.get("errors") or [])
+    chain_log_path = status.get("chain_log_path")
+
+    if chain_log_path is None:
+        errors.append("missing_chain_log_path")
+        return False, errors
+
+    ok, chain_errors = gus_chain_v4_stub.verify_chain(chain_log_path)
+    errors.extend(chain_errors)
+    return ok, errors
 
 
 def verify_integrity() -> bool:
     """
-    High-level check used by higher layers.
+    High-level integrity check for Layer 1.
+    Uses the hash chain to verify continuity and hash correctness.
 
     Returns:
-        True  -> basic integrity structure looks OK
-        False -> configuration/module/log problems detected
+        True if integrity passes (or chain is empty in skeleton mode),
+        False otherwise.
     """
     status = load_integrity_status()
-    ok = (
-        status.config_loaded
-        and status.chain_module_imported
-        and status.chain_log_path_exists
-    )
+    ok, errors = _verify_chain_from_status(status)
 
     if ok:
-        logger.info("Integrity verification: OK (skeleton mode).")
-    else:
-        logger.warning("Integrity verification: FAILED (skeleton mode).")
+        logger.info(
+            "Integrity verification: OK (hash spine continuous; errors=%s).",
+            errors,
+        )
+        return True
 
-    return ok
+    logger.error("Integrity verification FAILED: %s", errors)
+    return False

@@ -45,7 +45,7 @@ def main() -> None:
     # Layer 1 – Integrity Core
     print_header("Layer 1 – Integrity Core Status")
     integrity_status = load_integrity_status()
-    pprint(integrity_status.__dict__)
+    pprint(integrity_status)
 
     # Layer 1 – High-level verify call
     print_header("Layer 1 – Integrity Verification Result")
