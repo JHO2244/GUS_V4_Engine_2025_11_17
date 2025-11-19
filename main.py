@@ -1,16 +1,67 @@
-# This is a sample Python script.
+from __future__ import annotations
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+"""
+GUS v4 – Skeleton Diagnostic Harness
+
+This script runs a minimal health check for:
+- Layer 0 (UAM v4 status)
+- Layer 1 (Integrity Core status)
+
+It is read-only and safe: it only reads local JSON and prints results.
+"""
+
+from layer2_governance_matrix.L2_governance_static_stub import load_governance_status
+
+from layer3_decision_engine.L3_decision_matrix_stub import load_decision_engine_status
+
+from pprint import pprint
+
+from utils import get_guardian_logger
+from layer0_uam_v4.L0_uam_core_stub import load_uam_status
+from layer1_integrity_core.L1_integrity_core_stub import (
+    load_integrity_status,
+    verify_integrity,
+)
+
+logger = get_guardian_logger("GUSv4.Main")
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def print_header(title: str) -> None:
+    print("\n" + "=" * 60)
+    print(title)
+    print("=" * 60)
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+def main() -> None:
+    print_header("GUS v4 – Skeleton Diagnostic (Layers 0 & 1)")
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    # Layer 0 – UAM
+    print_header("Layer 0 – UAM v4 Status")
+    uam_status = load_uam_status()
+    pprint(uam_status.__dict__)
+
+    # Layer 1 – Integrity Core
+    print_header("Layer 1 – Integrity Core Status")
+    integrity_status = load_integrity_status()
+    pprint(integrity_status.__dict__)
+
+    # Layer 1 – High-level verify call
+    print_header("Layer 1 – Integrity Verification Result")
+    result = verify_integrity()
+    print(f"verify_integrity() => {result}")
+
+    print("\nGUS v4 skeleton diagnostic complete.\n")
+
+    # Layer 2 – Governance Matrix
+    print_header("Layer 2 – Governance Matrix Status")
+    governance_status = load_governance_status()
+    pprint(governance_status.__dict__)
+
+    # Layer 3 – Decision Engine
+    print_header("Layer 3 – Decision Engine Status")
+    decision_status = load_decision_engine_status()
+    pprint(decision_status.__dict__)
+
+
+if __name__ == "__main__":
+    main()

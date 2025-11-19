@@ -1,0 +1,23 @@
+{
+  "environment": "local",
+  "debug": true,
+
+  "logging": {
+    "level": "INFO",
+    "log_to_file": true,
+    "base_log_dir": "logs"
+  },
+
+  "security": {
+    "allow_external_network_calls": false,
+    "enforce_guardian_mode": true
+  },
+
+  "paths": {
+    "layer0": "layer0_uam_v4",
+    "layer1": "layer1_integrity_core",
+    "layer2": "layer2_governance_matrix",
+    "layer3": "layer3_decision_engine",
+    "layer4": "layer4_execution"
+  }
+}

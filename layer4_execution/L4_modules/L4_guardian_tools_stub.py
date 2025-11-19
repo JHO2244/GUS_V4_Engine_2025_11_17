@@ -1,0 +1,1 @@
+# Example: Guardian-aligned tools wrapper

@@ -1,0 +1,22 @@
+{
+  "description": "Mapping of Construction Laws and Pillars to governance councils – skeleton only.",
+  "construction_laws": {
+    "0": {
+      "label": "Law 0",
+      "council": "C_INTEGRITY",
+      "status": "placeholder"
+    },
+    "1": {
+      "label": "Law 1",
+      "council": "C_GOVERNANCE",
+      "status": "placeholder"
+    }
+  },
+  "pillars": {
+    "1": {
+      "label": "Pillar 1",
+      "council": "C_INTEGRITY",
+      "status": "placeholder"
+    }
+  }
+}

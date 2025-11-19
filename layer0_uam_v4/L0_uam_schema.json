@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1",
+  "description": "UAM v4.0 structural schema placeholder.",
+  "fields": {
+    "principles": {
+      "type": "list",
+      "description": "List of UAM principles or axioms.",
+      "items_type": "string"
+    },
+    "constraints": {
+      "type": "list",
+      "description": "List of hard constraints or invariants.",
+      "items_type": "string"
+    },
+    "ratings": {
+      "type": "object",
+      "description": "Optional UAM rating scales or thresholds.",
+      "properties": {}
+    }
+  }
+}

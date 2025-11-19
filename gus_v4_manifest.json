@@ -1,0 +1,48 @@
+{
+  "system_name": "GUS",
+  "version": "4.0.0",
+  "codename": "Guardian-Prime",
+  "description": "GUS v4 – Skeleton build (Layers 0–4) with UAM v4.0 alignment.",
+  "status": "skeleton",
+  "created_at": null,
+  "last_updated_at": null,
+
+  "layers": [
+    {
+      "id": 0,
+      "name": "UAM v4.0 Base Alignment",
+      "path": "layer0_uam_v4",
+      "status": "skeleton"
+    },
+    {
+      "id": 1,
+      "name": "Integrity Core & Hash Spine",
+      "path": "layer1_integrity_core",
+      "status": "skeleton"
+    },
+    {
+      "id": 2,
+      "name": "Governance Matrix (Static, Guardian-Prime)",
+      "path": "layer2_governance_matrix",
+      "status": "skeleton"
+    },
+    {
+      "id": 3,
+      "name": "Decision Engine",
+      "path": "layer3_decision_engine",
+      "status": "skeleton"
+    },
+    {
+      "id": 4,
+      "name": "Execution & Application Layer",
+      "path": "layer4_execution",
+      "status": "skeleton"
+    }
+  ],
+
+  "integrity": {
+    "essence_hash": null,
+    "status": "unverified",
+    "last_verified_at": null
+  }
+}

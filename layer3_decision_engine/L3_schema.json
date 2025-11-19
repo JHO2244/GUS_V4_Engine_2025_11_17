@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1",
+  "description": "Decision object schema – skeleton only.",
+  "fields": {
+    "decision_id": {
+      "type": "string",
+      "description": "Unique identifier for a decision."
+    },
+    "requested_action": {
+      "type": "string",
+      "description": "Human-readable description of requested action."
+    },
+    "layer_origin": {
+      "type": "integer",
+      "description": "Layer that initiated the decision (0–4)."
+    },
+    "status": {
+      "type": "string",
+      "allowed_values": [
+        "pending",
+        "approved",
+        "denied",
+        "aborted"
+      ]
+    }
+  }
+}
