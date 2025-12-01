@@ -1,13 +1,3 @@
- {
-  "description": "Integrity Core & Hash Spine configuration – skeleton only.",
-  "hash_algorithm": "sha256",
-  "chain_module": "layer1_integrity_core.chain.gus_chain_v4_stub",
-  "chain_log_file": "layer1_integrity_core/chain/gus_chain_log_placeholder.txt",
-
-  "enforcement_mode": "guardian_prime_dry_run",
-  "allowed_status_values": [
-    "unverified",
-    "ok",
-    "failed"
-  ]
+{
+  "status": "ok"
 }
