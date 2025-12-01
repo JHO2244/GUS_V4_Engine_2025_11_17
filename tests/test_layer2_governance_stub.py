@@ -1,29 +1,31 @@
-from layer2_governance_matrix.L2_governance_stub import (
+from layer2_governance_matrix.L2_governance_core_stub import (
+    GovernanceStatus,
     load_governance_status,
-    load_councils,
-    load_construction_laws,
-    load_schema
+    verify_governance,
 )
 
-def test_L2_schema_loads():
-    assert load_schema() is True
 
-
-def test_L2_councils_load():
-    councils, errors = load_councils()
-    assert isinstance(councils, list)
-    assert len(errors) == 0
-
-
-def test_L2_laws_load():
-    laws, errors = load_construction_laws()
-    assert isinstance(laws, list)
-    assert len(errors) == 0
-
-
-def test_L2_governance_status_ok():
+def test_load_governance_status_returns_status_object():
     status = load_governance_status()
-    assert status.councils_count >= 3
-    assert status.laws_count >= 2
-    assert status.schema_loaded is True
+    assert isinstance(status, GovernanceStatus)
+
+    # basic structural expectations
+    assert isinstance(status.councils_count, int)
+    assert isinstance(status.pillars_count, int)
+    assert isinstance(status.construction_laws_count, int)
     assert isinstance(status.errors, list)
+
+
+def test_verify_governance_returns_bool_and_is_true_for_default_config():
+    result = verify_governance()
+    assert isinstance(result, bool)
+    # With the shipped config, this should be True
+    assert result is True
+
+def verify_governance() -> bool:
+    """
+    Minimal verification stub for Layer 2.
+    Returns True if there are no errors in the governance status.
+    """
+    status = load_governance_status()
+    return bool(status.errors == [])

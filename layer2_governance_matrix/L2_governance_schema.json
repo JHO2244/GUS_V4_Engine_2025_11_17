@@ -1,10 +1,44 @@
 {
-  "version": "0.2",
-  "description": "Schema for GUS v4 Layer 2 Governance Matrix",
-  "fields": {
-    "councils": "list",
-    "construction_laws": "list",
-    "pillars": "list",
-    "lock_manifest": "object"
-  }
+  "lock": {
+    "locked": false,
+    "lock_level": "none"
+  },
+  "councils": [
+    {
+      "id": "C1",
+      "name": "Integrity Council",
+      "scope": "Integrity & Truth Density oversight"
+    },
+    {
+      "id": "C2",
+      "name": "Governance Council",
+      "scope": "Pillars, Laws & Ratings"
+    },
+    {
+      "id": "C3",
+      "name": "Safety Council",
+      "scope": "Risk, Fail-safes & Abuse Prevention"
+    }
+  ],
+  "pillars": [
+    {
+      "id": "P1",
+      "name": "Integrity Spine",
+      "description": "Keeps all governance logic aligned to Guardian standards."
+    }
+  ],
+  "construction_laws": [
+    {
+      "id": "L0",
+      "name": "No Corruption",
+      "description": "GUS cannot be used to intentionally lower systemic integrity.",
+      "active": true
+    },
+    {
+      "id": "L1",
+      "name": "Transparency",
+      "description": "All ratings and decisions must be traceable and auditable.",
+      "active": true
+    }
+  ]
 }
