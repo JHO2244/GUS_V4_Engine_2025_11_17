@@ -1,3 +1,4 @@
+from gus_engine_health import get_engine_health_as_dict
 from __future__ import annotations
 
 """
@@ -85,5 +86,53 @@ print("\nLayer 5 – Continuity Verification Result")
 print("============================================================")
 print(f"verify_continuity() => {verify_continuity()}")
 
+from layer6_replication.L6_replication_stub import (
+    load_replication_status as load_replication_status_l6,
+    verify_replication,
+)
+# similarly for L7–L9
+
+# inside main diagnostic:
+print("\n============================================================")
+print("Layer 6 – Replication Status")
+print("============================================================")
+print(load_replication_status_l6())
+print("\nLayer 6 – Replication Verification Result")
+print("============================================================")
+print(f"verify_replication() => {verify_replication()}")
+
 if __name__ == "__main__":
     main()
+
+print("\n============================================================")
+print("GUS v4 – Unified Engine Health Summary")
+print("============================================================")
+
+engine_health = get_engine_health_as_dict()
+print(f"overall_ok => {engine_health['overall_ok']}")
+for layer_id, lh in engine_health["layers"].items():
+    print(
+        f"Layer {lh['layer']} ({lh['name']}): "
+        f"verified={lh['verified']}, errors={len(lh['errors'])}"
+    )
+
+# ============================================================
+#  Unified Engine Health Summary (Layers 0–9)
+# ============================================================
+
+from gus_engine_health import get_engine_health_as_dict
+
+print("\n============================================================")
+print("GUS v4 – Unified Engine Health Summary")
+print("============================================================")
+
+engine_health = get_engine_health_as_dict()
+print(f"overall_ok => {engine_health['overall_ok']}")
+
+for layer_id, lh in engine_health["layers"].items():
+    print(
+        f"Layer {lh['layer']} ({lh['name']}): "
+        f"verified={lh['verified']}, errors={len(lh['errors'])}"
+    )
+
+print("\n[GUS v4] Diagnostics run complete.")
