@@ -1,0 +1,9 @@
+{
+  "pas_version": "1.0",
+  "authority": "JHO (Genesis Key)",
+  "mode": "GUS v4 – PyCharm Implementation",
+  "layers_covered": ["L0","L1","L2","L3","L4","L5","L6","L7","L8","L9"],
+  "seal_state": "stub-only",
+  "notes": "PAS defined at system level; this manifest is the code-level stub for future enforcement."
+}
+
