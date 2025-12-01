@@ -1,0 +1,10 @@
+{
+  "version": "0.2",
+  "description": "Schema for GUS v4 Layer 2 Governance Matrix",
+  "fields": {
+    "councils": "list",
+    "construction_laws": "list",
+    "pillars": "list",
+    "lock_manifest": "object"
+  }
+}

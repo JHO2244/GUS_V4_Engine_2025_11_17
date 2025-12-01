@@ -1,0 +1,7 @@
+{
+  "laws": [
+    { "id": 1, "title": "Law of Alignment", "desc": "All systems must align with UAM truth-density ≥ 0.97." },
+    { "id": 2, "title": "Law of Integrity", "desc": "Integrity overrides efficiency when in conflict." },
+    { "id": 3, "title": "Law of Coherence", "desc": "Every output must reduce systemic entropy, never increase it." }
+  ]
+}

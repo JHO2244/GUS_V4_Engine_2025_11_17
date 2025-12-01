@@ -1,0 +1,8 @@
+{
+  "councils": [
+    { "id": "C-1", "name": "Council of Integrity", "role": "Ensures moral physics compliance." },
+    { "id": "C-2", "name": "Council of Coherence", "role": "Maintains structural & systemic harmony." },
+    { "id": "C-3", "name": "Council of Truth", "role": "Validates truth-density of all inputs." },
+    { "id": "C-4", "name": "Council of Preservation", "role": "Oversees continuity & preservation logic." }
+  ]
+}
