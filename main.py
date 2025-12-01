@@ -69,5 +69,21 @@ def main() -> None:
     l4_status = load_execution_status()
     pprint(l4_status.__dict__)
 
+from layer5_continuity.L5_continuity_stub import (
+    load_continuity_status,
+    verify_continuity,
+)
+
+# ... inside main diagnostic:
+
+print("\n============================================================")
+print("Layer 5 – Continuity Layer Status")
+print("============================================================")
+l5_status = load_continuity_status()
+print(l5_status)
+print("\nLayer 5 – Continuity Verification Result")
+print("============================================================")
+print(f"verify_continuity() => {verify_continuity()}")
+
 if __name__ == "__main__":
     main()

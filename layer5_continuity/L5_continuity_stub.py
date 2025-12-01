@@ -1,44 +1,43 @@
 """
-GUS v4 – Layer 5 Continuity Stub (skeleton only)
+L5_continuity_stub.py – Layer 5 Continuity Core (v0.1)
 
-Role:
-    - Provide a single interface for snapshots, restores, and upgrade-safe
-      state handling across all layers (0–9).
-    - For now, only defines data structures and no real persistence.
+Minimal continuity status + verification stub for GUS v4.
+Keeps the interface stable while we design full continuity logic later.
 """
 
-from __future__ import annotations
-from dataclasses import dataclass, asdict
-from datetime import datetime
-from typing import Dict, Any
+from dataclasses import dataclass, field
+from typing import List
 
 
 @dataclass
-class ContinuitySnapshot:
-    """Minimal continuity snapshot structure (v0.1 stub)."""
-    version: str
-    created_at: str
-    notes: str = "stub-only snapshot – no real state yet"
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+class ContinuityStatus:
+    code: str = "ok"                 # "ok" | "degraded" | "error"
+    checkpoints_count: int = 0       # how many continuity checkpoints are defined
+    policies_count: int = 0          # how many continuity / preservation policies
+    errors: List[str] = field(default_factory=list)
 
 
-def create_stub_snapshot(version: str = "GUS_v4.0") -> ContinuitySnapshot:
+def load_continuity_status() -> ContinuityStatus:
     """
-    Create a minimal continuity snapshot object.
-    Later this will include hashes, layer states, and manifests.
+    Static v0.1 stub.
+
+    Returns a default ContinuityStatus object.
+    Later we can load this from L5_continuity_config.json or similar.
     """
-    return ContinuitySnapshot(
-        version=version,
-        created_at=datetime.utcnow().isoformat() + "Z",
+    # v0.1: no file I/O yet – just a clean OK object
+    return ContinuityStatus(
+        code="ok",
+        checkpoints_count=0,
+        policies_count=0,
+        errors=[],
     )
 
 
-def dump_stub_snapshot() -> Dict[str, Any]:
+def verify_continuity() -> bool:
     """
-    Convenience helper used by higher layers/tests:
-    returns a dict representation of the current stub snapshot.
+    Minimal verification stub for Layer 5.
+
+    Returns True if there are no errors in the continuity status.
     """
-    snap = create_stub_snapshot()
-    return snap.to_dict()
+    status = load_continuity_status()
+    return status.code == "ok" and status.errors == []
