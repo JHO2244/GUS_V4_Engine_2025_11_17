@@ -1,6 +1,8 @@
 .:
 README.md
 __pycache__
+docs
+gus_engine_health.py
 gus_v4_manifest.json
 gus_v4_settings.example.json
 layer0_uam_v4
@@ -21,13 +23,19 @@ project_structure.txt
 project_structure_core.txt
 scratch_l1_genesis.py
 scratch_l4_ping.py
+scripts
 tests
 utils
 
 ./__pycache__:
+gus_engine_health.cpython-314.pyc
 main.cpython-314.pyc
 scratch_l1_genesis.cpython-314.pyc
 scratch_l4_ping.cpython-314.pyc
+
+./docs:
+GUS_v4_engine_snapshot.md
+architecture_overview.md
 
 ./layer0_uam_v4:
 L0_uam_core_stub.py
@@ -64,15 +72,22 @@ __init__.cpython-314.pyc
 gus_chain_v4_stub.cpython-314.pyc
 
 ./layer2_governance_matrix:
+L2_construction_laws.json
 L2_council_definitions.json
+L2_councils_map.json
+L2_governance_core_stub.py
+L2_governance_schema.json
 L2_governance_static_stub.py
+L2_governance_stub.py
 L2_lock_manifest.json
 L2_pillars_laws_map.json
 __init__.py
 __pycache__
 
 ./layer2_governance_matrix/__pycache__:
+L2_governance_core_stub.cpython-314.pyc
 L2_governance_static_stub.cpython-314.pyc
+L2_governance_stub.cpython-314.pyc
 __init__.cpython-314.pyc
 
 ./layer3_decision_engine:
@@ -113,29 +128,55 @@ L4_executor_stub.cpython-314.pyc
 __init__.cpython-314.pyc
 
 ./layer5_continuity:
+L5_continuity_schema.json
 L5_continuity_stub.py
 L5_lock_manifest.json
 __init__.py
+__pycache__
+
+./layer5_continuity/__pycache__:
+L5_continuity_stub.cpython-314.pyc
+__init__.cpython-314.pyc
 
 ./layer6_replication:
 L6_lock_manifest.json
 L6_replication_stub.py
 __init__.py
+__pycache__
+
+./layer6_replication/__pycache__:
+L6_replication_stub.cpython-314.pyc
+__init__.cpython-314.pyc
 
 ./layer7_ecosystem:
 L7_ecosystem_stub.py
 L7_lock_manifest.json
 __init__.py
+__pycache__
+
+./layer7_ecosystem/__pycache__:
+L7_ecosystem_stub.cpython-314.pyc
+__init__.cpython-314.pyc
 
 ./layer8_meta_governance:
 L8_lock_manifest.json
 L8_meta_governance_stub.py
 __init__.py
+__pycache__
+
+./layer8_meta_governance/__pycache__:
+L8_meta_governance_stub.cpython-314.pyc
+__init__.cpython-314.pyc
 
 ./layer9_preservation:
 L9_lock_manifest.json
 L9_preservation_stub.py
 __init__.py
+__pycache__
+
+./layer9_preservation/__pycache__:
+L9_preservation_stub.cpython-314.pyc
+__init__.cpython-314.pyc
 
 ./logs:
 execution
@@ -150,24 +191,50 @@ integrity
 
 ./pas:
 __init__.py
+__pycache__
 pas_seal_stub.py
+
+./pas/__pycache__:
+__init__.cpython-314.pyc
+pas_seal_stub.cpython-314.pyc
+
+./scripts:
+run_diagnostics.bat
+run_diagnostics.sh
 
 ./tests:
 __init__.py
 __pycache__
+test_engine_health.py
 test_layer0_uam_stub.py
 test_layer1_integrity_stub.py
 test_layer2_governance_stub.py
 test_layer3_decision_stub.py
 test_layer4_execution_stub.py
+test_layer5_continuity_stub.py
+test_layer6_replication_stub.py
+test_layer7_ecosystem_stub.py
+test_layer8_meta_governance_stub.py
+test_layer9_preservation_stub.py
 
 ./tests/__pycache__:
 __init__.cpython-314.pyc
+test_engine_health.cpython-314-pytest-9.0.1.pyc
+test_layer0_uam_stub.cpython-314-pytest-9.0.1.pyc
 test_layer0_uam_stub.cpython-314.pyc
+test_layer1_integrity_stub.cpython-314-pytest-9.0.1.pyc
 test_layer1_integrity_stub.cpython-314.pyc
+test_layer2_governance_stub.cpython-314-pytest-9.0.1.pyc
 test_layer2_governance_stub.cpython-314.pyc
+test_layer3_decision_stub.cpython-314-pytest-9.0.1.pyc
 test_layer3_decision_stub.cpython-314.pyc
+test_layer4_execution_stub.cpython-314-pytest-9.0.1.pyc
 test_layer4_execution_stub.cpython-314.pyc
+test_layer5_continuity_stub.cpython-314-pytest-9.0.1.pyc
+test_layer6_replication_stub.cpython-314-pytest-9.0.1.pyc
+test_layer7_ecosystem_stub.cpython-314-pytest-9.0.1.pyc
+test_layer8_meta_governance_stub.cpython-314-pytest-9.0.1.pyc
+test_layer9_preservation_stub.cpython-314-pytest-9.0.1.pyc
 
 ./utils:
 __init__.py

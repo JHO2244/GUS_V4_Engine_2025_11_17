@@ -7,4 +7,3 @@ def test_continuity_status_loads():
 
 def test_continuity_verify_ok():
     assert verify_continuity() is True
-
