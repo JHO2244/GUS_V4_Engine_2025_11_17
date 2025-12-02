@@ -1,12 +1,9 @@
-from .L5_continuity_stub import (
-    load_continuity_status,
-    verify_continuity,
-    ContinuityStatus
-)
+"""
+GUS v4 – Layer 7: Ecosystem
 
-__all__ = [
-    "load_continuity_status",
-    "verify_continuity",
-    "ContinuityStatus"
-]
+Lightweight package init.
+All real logic is in `L7_ecosystem_stub.py`.
 
+Intentionally kept free of cross-layer imports to avoid cycles.
+"""
+# No imports here on purpose.
