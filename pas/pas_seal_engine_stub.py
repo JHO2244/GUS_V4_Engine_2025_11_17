@@ -1,129 +1,98 @@
-import hashlib
-from datetime import datetime
+# pas/pas_seal_engine_stub.py
+"""
+GUS v4 – PAS Phase 2 continuity seal stub v0.3
+
+Anchors:
+- Engine health snapshot
+- Git commit
+- Genesis hash (placeholder for now)
+- Tri-Node Signature
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from typing import Any, Dict
-
-class PASSeal:
-    def __init__(self, version: str, scope: str, issuer: str, timestamp: str, payload_hash: str):
-        self.version = version
-        self.scope = scope
-        self.issuer = issuer
-        self.timestamp = timestamp
-        self.payload_hash = payload_hash
-
-def compute_hash(payload: dict) -> str:
-    raw = str(payload).encode("utf-8")
-    return hashlib.sha256(raw).hexdigest()
-
-def generate_seal_proto(scope: str, issuer: str = "JHO") -> PASSeal:
-    timestamp = datetime.utcnow().isoformat()
-    payload = {
-        "scope": scope,
-        "issuer": issuer,
-        "timestamp": timestamp,
-    }
-    payload_hash = compute_hash(payload)
-    return PASSeal(
-        version="PAS.v1.0-proto",
-        scope=scope,
-        issuer=issuer,
-        timestamp=timestamp,
-        payload_hash=payload_hash
-    )
-
-from pathlib import Path
-from typing import Dict, Any, List
 import json
+import hashlib
+import subprocess
 
-from utils import get_guardian_logger
-
-logger = get_guardian_logger("GUSv4.PAS.Stage")
-
-STAGE_LOG_PATH = Path("logs") / "gus_stage_log.json"
+from gus_engine_health import get_engine_health_summary
 
 
-def build_phase2_continuity_payload(engine_summary: Dict[str, Any]) -> Dict[str, Any]:
+TRI_NODE_SIGNATURE = "JHO | GPT-5.1 Thinking | GROK 4"
+
+
+def _iso_now() -> str:
+    """Return an ISO-8601 UTC timestamp with explicit 'Z' suffix."""
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _hash_payload(payload: dict) -> str:
     """
-    Build a canonical payload for:
-    GUS v4 – Phase 2 Initialization (Continuity Layer Awakening).
+    Deterministically compute a seal_id from the payload.
+    Stable ordering + compact separators for canonical hashing.
     """
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _get_git_commit_hash_short() -> str | None:
+    """
+    Return the current git HEAD short hash, or None if unavailable.
+    Stub-friendly: failures are swallowed and reported as None.
+    """
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+        )
+        commit = out.decode("utf-8").strip()
+        return commit or None
+    except Exception:
+        return None
+
+
+def _build_phase2_continuity_payload() -> dict:
+    """
+    Build the payload for the Phase 2 continuity seal.
+
+    This pulls a lightweight engine-health snapshot from gus_engine_health.
+    """
+    engine_health = get_engine_health_summary()
+
     return {
-        "scope": "GUS_v4_Phase2_Continuity_Awakening",
-        "stage": "Phase2_Continuity_Layer",
-        "engine_overall_ok": bool(engine_summary.get("overall_ok", True)),
-        "engine_layers": engine_summary.get("layers", {}),
+        "phase": "PAS_Phase2",
+        "engine_health": engine_health,
         "meta": {
-            "note": "First continuity-stage seal after L0–L9 skeleton + PAS proto online.",
+            "git_commit": _get_git_commit_hash_short(),
+            "genesis_hash": None,  # TODO: wire when Genesis Hash comes online
+            "tri_node_signature": TRI_NODE_SIGNATURE,
         },
     }
 
 
-def append_stage_seal_to_log(seal: PASSeal, log_path: Path = STAGE_LOG_PATH) -> None:
+def mint_phase2_continuity_seal() -> dict:
     """
-    Append the PAS seal to logs/gus_stage_log.json in a simple list structure.
-    Creates the file if it does not exist.
+    Mint a continuity seal snapshotting current engine health & metadata.
     """
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+    issued_at = _iso_now()
+    payload = _build_phase2_continuity_payload()
+    seal_id = _hash_payload(payload)
 
-    if log_path.exists():
-        try:
-            existing: List[Dict[str, Any]] = json.loads(log_path.read_text(encoding="utf-8"))
-            if not isinstance(existing, list):
-                logger.warning("Stage log %s is not a list; resetting.", log_path)
-                existing = []
-        except Exception as exc:  # pragma: no cover (defensive)
-            logger.error("Failed to read existing stage log at %s: %s", log_path, exc)
-            existing = []
-    else:
-        existing = []
-
-    entry = {
-        "version": seal.version,
-        "created_at": seal.created_at,
-        "issuer": seal.issuer,
-        "scope": seal.scope,
-        "payload_hash": seal.payload_hash,
-    }
-    existing.append(entry)
-
-    log_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
-    logger.info("Appended PAS stage seal to %s (entries=%d).", log_path, len(existing))
-
-def generate_pas_seal(payload: Dict[str, Any], issuer: str) -> Dict[str, Any]:
-    """
-    Tiny PAS seal stub for Phase 2.
-
-    In the real engine this would:
-      - normalize payload
-      - attach cryptographic signatures
-      - write to PAS ledger
-
-    For now we just:
-      - wrap the payload with issuer + UTC timestamp
-      - mark this clearly as a stub object
-    """
     return {
-        "seal_version": "PAS_v4_phase2_stub",
-        "issuer": issuer,
-        "issued_at": datetime.utcnow().isoformat() + "Z",
+        "seal_version": "PAS_v4_phase2_v0.3",
+        "seal_id": seal_id,
+        "issuer": "GUS_v4_PAS_Phase2_core",
+        "issued_at": issued_at,
         "payload": payload,
     }
 
-def mint_phase2_continuity_seal() -> dict:
-    """
-    Produce a Phase 2 continuity seal based on current engine health.
-    Safe stub: reads from gus_engine_health, returns a structured dict.
-    """
-    issuer = "GUS_v4_PAS_Phase2_stub"
 
-    # Local import to avoid cycles
-    from gus_engine_health import get_engine_health_summary
-
-    engine_summary = get_engine_health_summary()
-
-    payload = {
-        "phase": "PAS_Phase2",
-        "engine_health": engine_summary,
-    }
-
-    seal = generate_pas_seal(payload, issuer=issuer)
-    return seal
+if __name__ == "__main__":
+    # Local debug helper:
+    print(json.dumps(mint_phase2_continuity_seal(), indent=2))
