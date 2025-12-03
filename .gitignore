@@ -1,4 +1,43 @@
-venv/
+#############################################
+# GUS v4 — Clean Repo Policy
+# Version: 2025-12-03
+#############################################
+
+# === Python cache & compiled artifacts ===
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# === Virtual environments ===
+venv/
+.env/
+env/
+
+# === PyCharm / IDE configs ===
 .idea/
+*.iml
+
+# === Test cache ===
+.pytest_cache/
+
+# === Logs ===
+logs/
+exportToHTML/logs/
+
+# === HTML export builds ===
+exportToHTML/
+
+# === Local runtime files ===
 *.log
+*.tmp
+*.bak
+
+# === System files ===
+.DS_Store
+Thumbs.db
+
+# === GUS internal generated manifests ===
+layer1_integrity_core/L1_integrity_status.json
+layer1_integrity_core/chain/*.json
+pas_phase2_sample_seal.json
