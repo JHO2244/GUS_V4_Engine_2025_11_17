@@ -1,32 +1,37 @@
 """
-GUS v4 – PAS Hardening Suite v0.1
+PAS Hardening Suite v0.1
 
-Purpose:
-- Provide a minimal, import-safe interface for PAS tamper tests.
-- Later we will flesh this out with real tamper scenarios.
-
-This file is intentionally simple for v0.1 so that:
-- Imports are stable.
-- Tests can focus on structure and wiring.
+Tiny, well-typed baseline so the PAS tests can verify wiring and shape
+without us committing to heavy logic yet.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, auto
 from typing import Any, Dict, List
 
+# Public version tag used by tests and other PAS modules
+PAS_HARDENING_VERSION: str = "0.1"
 
-class Severity(str, Enum):
-    INFO = "info"
-    WARNING = "warning"
-    CRITICAL = "critical"
+
+class Severity(Enum):
+    """Basic severity levels for PAS tamper scenarios."""
+    INFO = auto()
+    WARNING = auto()
+    CRITICAL = auto()
 
 
 @dataclass
 class TamperScenarioResult:
     """
-    Represents the outcome of a single tamper scenario.
+    Result for a single PAS tamper scenario.
+
+    Fields are shaped to match what the tests expect:
+    - name: human-readable identifier for the scenario
+    - severity: Severity enum
+    - detected: whether the condition was observed
+    - details: free-form metadata payload
     """
     name: str
     severity: Severity
@@ -34,14 +39,39 @@ class TamperScenarioResult:
     details: Dict[str, Any]
 
 
+def _build_baseline_scenarios() -> List[TamperScenarioResult]:
+    """
+    Build the minimal baseline set of scenarios for v0.1.
+
+    We only wire a single “sanity check” scenario for now – the point
+    is to prove the API and integration work, not to implement
+    real tamper detection yet.
+    """
+    return [
+        TamperScenarioResult(
+            name="PAS-000: baseline sanity check",
+            severity=Severity.INFO,
+            detected=True,
+            details={
+                "note": "PAS hardening suite imported and baseline scenario executed.",
+                "version": PAS_HARDENING_VERSION,
+            },
+        )
+    ]
+
+
 def run_all_scenarios() -> List[TamperScenarioResult]:
     """
-    v0.1 stub implementation.
+    Run all configured PAS tamper scenarios and return their results.
 
-    Returns an empty list for now; the mere existence of this
-    function allows tests to:
-    - import the hardening suite
-    - assert basic structural properties
-    - later, we’ll add real scenarios that mutate manifests etc.
+    In v0.1 this just returns the baseline wiring scenario.
     """
-    return []
+    return _build_baseline_scenarios()
+
+
+__all__ = [
+    "TamperScenarioResult",
+    "Severity",
+    "PAS_HARDENING_VERSION",
+    "run_all_scenarios",
+]
