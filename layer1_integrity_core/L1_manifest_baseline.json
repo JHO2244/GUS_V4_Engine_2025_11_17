@@ -1,31 +1,23 @@
 {
-  "version": "L1_manifest_v0.1",
-  "generated_at": "2025-12-03T06:54:58.985248+00:00",
-  "note": "Minimal baseline manifest for PAS Phase 3 hardening.",
+  "version": "L1_manifest_baseline_v2",
+  "created_at": "2025-12-03T07:32:48.339320+00:00",
+  "note": "PAS Phase 3: L1 baseline after tests green",
   "files": [
     {
       "path": "layer1_integrity_core/L1_integrity_core_stub.py",
-      "role": "core",
-      "required": true,
-      "sha256": "e3b93cbb8dba8d137bfa02097dee912b2669973be33696dfa52e9cf1060d5f1e"
+      "sha256": "2f3e48531cd3f9f259a74effda769701df92b617ef76cda9183645d2ce79e705"
     },
     {
       "path": "gus_engine_health.py",
-      "role": "core",
-      "required": true,
-      "sha256": "16936ff15d4dfea60d7bfb5826fb30525ac063faf00c724ffd95883451a8b8e4"
+      "sha256": "c6c8970349fbb69836b721e6b28b10a1ac79e39b32b72e4815f9728962749325"
     },
     {
       "path": "pas/pas_seal_engine_stub.py",
-      "role": "core",
-      "required": true,
       "sha256": "1631ca0427aa94ad4805f422773dae3159bbf6f34dcabbe64adf5b6987531bb2"
     },
     {
       "path": "tests/test_layer1_integrity_stub.py",
-      "role": "core",
-      "required": true,
-      "sha256": "87dc84b43bc474b8e4b6a163c9e402ee70f0a7754c26ddb46cd0999e4a4ded68"
+      "sha256": "699fd9e8d2f5b0095c6504ad05eddd7ada0409690609be3385f49d35c07eb480"
     }
   ]
 }
