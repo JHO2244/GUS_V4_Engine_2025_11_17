@@ -1,29 +1,21 @@
-from datetime import datetime, timezone
-from layer1_integrity_core.L1_integrity_core_stub import (
-    load_integrity_status,
-    verify_integrity,
-)
-
+from layer1_integrity_core.L1_integrity_core_stub import verify_integrity
 
 def get_engine_health_summary() -> dict:
-    """
-    Aggregate a lightweight health summary for the engine, currently focused on L1.
+    l1_ok, l1_issues = verify_integrity()
 
-    Returns a JSON-serializable dict, e.g.:
-
-    {
-        "overall_ok": true,
-        "checked_at": "...Z",
+    return {
+        "overall_ok": l1_ok,
+        "checked_at": "AUTO_FILL_AT_RUNTIME",  # you likely already have datetime logic
         "layers": {
             "L1_integrity_core": {
-                "engine_ok": true,
-                "reason": "integrity verified",
-                "checked_at": "...Z",
-                "files_checked": 0
+                "engine_ok": l1_ok,
+                "reason": l1_issues[0].reason if l1_issues else "OK",
+                "files_checked": 0 if not l1_ok and not l1_issues else len(l1_issues) or len(l1_issues),
+                # you can refine this field as you like
             }
-        }
+        },
     }
-    """
+
     # 1) Load the raw status object from L1
     status = load_integrity_status()  # IntegrityStatus
 
