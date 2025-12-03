@@ -19,9 +19,29 @@ import subprocess
 
 from gus_engine_health import get_engine_health_summary
 
+from layer1_integrity_core.chain.genesis_spine_stub import get_genesis_hash
+
 
 TRI_NODE_SIGNATURE = "JHO | GPT-5.1 Thinking | GROK 4"
 
+def _get_current_git_commit() -> str:
+    """
+    Best-effort short git commit hash.
+
+    Returns:
+        A short commit hash (e.g. '924e74b') if git is available and the
+        current directory is a git repo; otherwise the string 'UNKNOWN'.
+    """
+    import subprocess
+
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+        )
+        return out.decode("utf-8").strip()
+    except Exception:
+        return "UNKNOWN"
 
 def _iso_now() -> str:
     """Return an ISO-8601 UTC timestamp with explicit 'Z' suffix."""
@@ -59,21 +79,27 @@ def _get_git_commit_hash_short() -> str | None:
 
 def _build_phase2_continuity_payload() -> dict:
     """
-    Build the payload for the Phase 2 continuity seal.
+    Build the payload that will be sealed by the PAS engine for Phase 2.
 
-    This pulls a lightweight engine-health snapshot from gus_engine_health.
+    The intention is that this payload is:
+    - JSON-serializable
+    - free from secrets
+    - stable enough to be hashed / signed by external guardians later
     """
-    engine_health = get_engine_health_summary()
+    health = get_engine_health_summary()
+    spine_genesis_hash = get_genesis_hash()
 
-    return {
+    payload = {
         "phase": "PAS_Phase2",
-        "engine_health": engine_health,
+        "engine_health": health,
         "meta": {
-            "git_commit": _get_git_commit_hash_short(),
-            "genesis_hash": None,  # TODO: wire when Genesis Hash comes online
+            "git_commit": _get_current_git_commit(),
+            "genesis_hash": spine_genesis_hash,
             "tri_node_signature": TRI_NODE_SIGNATURE,
         },
     }
+    return payload
+
 
 
 def mint_phase2_continuity_seal() -> dict:
