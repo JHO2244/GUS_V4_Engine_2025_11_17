@@ -1,11 +1,9 @@
 {
-  "version": "L1_manifest_baseline_v2",
-  "created_at": "2025-12-03T07:32:48.339320+00:00",
-  "note": "PAS Phase 3: L1 baseline after tests green",
+  "generated_at": "2025-12-03T07:55:28.123468+00:00",
   "files": [
     {
       "path": "layer1_integrity_core/L1_integrity_core_stub.py",
-      "sha256": "2f3e48531cd3f9f259a74effda769701df92b617ef76cda9183645d2ce79e705"
+      "sha256": "a259be13578197946191601eac55fcf954292c8def8df43e45e69d47be05f1d5"
     },
     {
       "path": "gus_engine_health.py",

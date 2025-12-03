@@ -1,70 +1,76 @@
-from layer1_integrity_core.L1_integrity_core_stub import verify_integrity
+from __future__ import annotations
 
-def get_engine_health_summary() -> dict:
+from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
+from typing import Dict, List
+
+from layer1_integrity_core import verify_integrity
+
+
+@dataclass
+class LayerHealth:
+    layer: str
+    name: str
+    engine_ok: bool
+    reason: str
+    files_checked: int | None = None
+
+
+@dataclass
+class EngineHealth:
+    overall_ok: bool
+    checked_at: str
+    layers: Dict[str, LayerHealth]
+
+
+def get_engine_health() -> EngineHealth:
+    """Compute a minimal but structured engine-health snapshot.
+
+    For PAS Phase 3 we only wire Layer 1, but the structure is future-proof:
+    additional layers can be added to the mapping as they come online.
+    """
     l1_ok, l1_issues = verify_integrity()
 
-    return {
-        "overall_ok": l1_ok,
-        "checked_at": "AUTO_FILL_AT_RUNTIME",  # you likely already have datetime logic
-        "layers": {
-            "L1_integrity_core": {
-                "engine_ok": l1_ok,
-                "reason": l1_issues[0].reason if l1_issues else "OK",
-                "files_checked": 0 if not l1_ok and not l1_issues else len(l1_issues) or len(l1_issues),
-                # you can refine this field as you like
-            }
-        },
-    }
-
-    # 1) Load the raw status object from L1
-    status = load_integrity_status()  # IntegrityStatus
-
-    # 2) Run the simple integrity gate (boolean)
-    try:
-        engine_ok = bool(verify_integrity())
-    except Exception as exc:
-        engine_ok = False
-        reason = f"verify_integrity raised: {exc!r}"
+    if l1_issues:
+        reason = "; ".join(issue.reason for issue in l1_issues)
+    elif not l1_ok:
+        # defensive fallback – should not normally happen
+        reason = "unknown integrity failure"
     else:
-        # Prefer an explicit reason if present on status, otherwise generic
-        reason = getattr(status, "reason", None) or (
-            "integrity verified" if engine_ok else "integrity verification failed"
-        )
+        reason = "ok"
 
-    # 3) Extract optional metadata safely
-    checked_at = getattr(status, "checked_at", None)
-    if checked_at is None:
-        checked_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    checked_at = datetime.now(timezone.utc).isoformat()
+    l1_health = LayerHealth(
+        layer="L1",
+        name="Integrity Core",
+        engine_ok=l1_ok,
+        reason=reason,
+    )
 
-    files_checked = 0
-    files = getattr(status, "files", None)
-    if isinstance(files, (list, tuple)):
-        files_checked = len(files)
+    overall_ok = l1_ok
+    return EngineHealth(
+        overall_ok=overall_ok,
+        checked_at=checked_at,
+        layers={"L1_integrity_core": l1_health},
+    )
 
-    # 4) Build normalized health summary
-    layer_summary = {
-        "engine_ok": engine_ok,
-        "reason": reason,
-        "checked_at": checked_at,
-        "files_checked": files_checked,
-    }
 
+def get_engine_health_as_dict() -> dict:
+    """Return EngineHealth in a plain-dict form convenient for JSON dumping."""
+    health = get_engine_health()
     return {
-        "overall_ok": bool(engine_ok),
-        "checked_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "layers": {
-            "L1_integrity_core": layer_summary,
-        },
+        "overall_ok": health.overall_ok,
+        "checked_at": health.checked_at,
+        "layers": {name: asdict(h) for name, h in health.layers.items()},
     }
 
 
-import json
+def get_engine_health_summary() -> dict:
+    """Thin alias kept for backwards compatibility with earlier PAS steps."""
+    return get_engine_health_as_dict()
 
 
-def main() -> None:
-    summary = get_engine_health_summary()
-    print(json.dumps(summary, indent=2, sort_keys=False))
+if __name__ == "__main__":  # pragma: no cover
+    import json
 
-
-if __name__ == "__main__":
-    main()
+    print(json.dumps(get_engine_health_summary(), indent=2))
