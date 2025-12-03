@@ -11,7 +11,7 @@
     },
     {
       "path": "pas/pas_seal_engine_stub.py",
-      "sha256": "1631ca0427aa94ad4805f422773dae3159bbf6f34dcabbe64adf5b6987531bb2"
+      "sha256": "58aa8e58c43003a8838be829d24e619b963d8e4b704b0f28be232214c78a21e9"
     },
     {
       "path": "tests/test_layer1_integrity_stub.py",
