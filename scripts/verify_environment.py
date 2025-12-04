@@ -13,13 +13,6 @@ Purpose:
         - Backup configuration placeholder
 
     This is intentionally conservative and read-only.
-    Future versions (v0.2+) can add:
-        - BitLocker / VeraCrypt status hooks
-        - ESET / firewall / VPN checks
-        - More detailed backup verification
-
-Usage:
-    python -m scripts.verify_environment
 """
 
 from __future__ import annotations
@@ -33,6 +26,9 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
+# ------------------------------------------------------------
+# Severity Levels
+# ------------------------------------------------------------
 class Severity(str, Enum):
     INFO = "INFO"
     WARN = "WARN"
@@ -48,6 +44,9 @@ class EnvCheckResult:
     details: Dict[str, Any]
 
 
+# ------------------------------------------------------------
+# Project Structure Markers
+# ------------------------------------------------------------
 PROJECT_ROOT_MARKERS = [
     "gus_v4_manifest.json",
     "layer0_uam_v4",
@@ -64,15 +63,14 @@ PROJECT_ROOT_MARKERS = [
 
 
 def _find_project_root() -> Path:
-    """
-    Best-effort detection of GUS v4 project root based on this file location.
-    """
+    """Detect GUS project root based on this file’s location."""
     here = Path(__file__).resolve()
-    # scripts/verify_environment.py → project root = parent of scripts
-    root = here.parents[1]
-    return root
+    return here.parents[1]
 
 
+# ------------------------------------------------------------
+# Individual Checks
+# ------------------------------------------------------------
 def check_os_info() -> EnvCheckResult:
     info = {
         "system": platform.system(),
@@ -80,50 +78,31 @@ def check_os_info() -> EnvCheckResult:
         "version": platform.version(),
         "python": sys.version.split()[0],
     }
-    # v0.1: Always OK; we just record metadata.
-    return EnvCheckResult(
-        check_id="ENV-001",
-        name="OS & Python info",
-        severity=Severity.INFO,
-        ok=True,
-        details=info,
-    )
+    return EnvCheckResult("ENV-001", "OS & Python info", Severity.INFO, True, info)
 
 
 def check_venv_active() -> EnvCheckResult:
     in_venv = getattr(sys, "base_prefix", sys.prefix) != sys.prefix
-    details = {
-        "sys_prefix": sys.prefix,
-        "base_prefix": getattr(sys, "base_prefix", None),
-        "in_venv": in_venv,
-    }
+    severity = Severity.INFO if in_venv else Severity.WARN
 
-    if in_venv:
-        return EnvCheckResult(
-            check_id="ENV-002",
-            name="Python virtual environment active",
-            severity=Severity.INFO,
-            ok=True,
-            details=details,
-        )
-    else:
-        # Not critical for basic dev, but we flag a WARN for Guardian discipline.
-        return EnvCheckResult(
-            check_id="ENV-002",
-            name="Python virtual environment active",
-            severity=Severity.WARN,
-            ok=False,
-            details=details,
-        )
+    return EnvCheckResult(
+        "ENV-002",
+        "Python virtual environment active",
+        severity,
+        in_venv,
+        {
+            "sys_prefix": sys.prefix,
+            "base_prefix": getattr(sys, "base_prefix", None),
+            "in_venv": in_venv,
+        },
+    )
 
 
 def check_project_root_structure(root: Path) -> EnvCheckResult:
-    missing: List[str] = []
-    present: List[str] = []
+    missing, present = [], []
 
     for marker in PROJECT_ROOT_MARKERS:
-        p = root / marker
-        if p.exists():
+        if (root / marker).exists():
             present.append(marker)
         else:
             missing.append(marker)
@@ -132,15 +111,11 @@ def check_project_root_structure(root: Path) -> EnvCheckResult:
     severity = Severity.INFO if ok else Severity.CRITICAL
 
     return EnvCheckResult(
-        check_id="ENV-003",
-        name="GUS v4 project structure baseline",
-        severity=severity,
-        ok=ok,
-        details={
-            "root": str(root),
-            "present": present,
-            "missing": missing,
-        },
+        "ENV-003",
+        "GUS v4 project structure baseline",
+        severity,
+        ok,
+        {"root": str(root), "present": present, "missing": missing},
     )
 
 
@@ -157,11 +132,11 @@ def check_logs_structure(root: Path) -> EnvCheckResult:
     severity = Severity.INFO if ok else Severity.WARN
 
     return EnvCheckResult(
-        check_id="ENV-004",
-        name="Logs directory structure",
-        severity=severity,
-        ok=ok,
-        details=paths,
+        "ENV-004",
+        "Logs directory structure",
+        severity,
+        ok,
+        paths,
     )
 
 
@@ -171,80 +146,56 @@ def check_git_repo(root: Path) -> EnvCheckResult:
     severity = Severity.INFO if ok else Severity.WARN
 
     return EnvCheckResult(
-        check_id="ENV-005",
-        name="Git repository presence",
-        severity=severity,
-        ok=ok,
-        details={"git_dir": str(git_dir), "exists": ok},
+        "ENV-005",
+        "Git repository presence",
+        severity,
+        ok,
+        {"git_dir": str(git_dir), "exists": ok},
     )
 
 
 def check_backup_configuration(root: Path) -> EnvCheckResult:
-    """
-    v0.1 placeholder:
-        - If env var GUS_BACKUP_PATH is set, we check the path exists.
-        - Otherwise we WARN but do not fail.
-
-    This allows you to wire in your encrypted backup volume later
-    without hardcoding paths in the repo.
-    """
-    backup_path_env = os.environ.get("GUS_BACKUP_PATH")
-    if not backup_path_env:
+    backup_env = os.environ.get("GUS_BACKUP_PATH")
+    if not backup_env:
         return EnvCheckResult(
-            check_id="ENV-006",
-            name="Backup configuration (GUS_BACKUP_PATH)",
-            severity=Severity.WARN,
-            ok=False,
-            details={
+            "ENV-006",
+            "Backup configuration (GUS_BACKUP_PATH)",
+            Severity.WARN,
+            False,
+            {
                 "configured": False,
-                "message": (
-                    "Environment variable GUS_BACKUP_PATH not set. "
-                    "Set this to your encrypted backup root to enable automated checks."
-                ),
+                "message": "Environment variable GUS_BACKUP_PATH not set.",
             },
         )
 
-    backup_path = Path(backup_path_env)
+    backup_path = Path(backup_env)
     exists = backup_path.exists()
 
-    severity = Severity.INFO if exists else Severity.WARN
-    ok = exists
-
     return EnvCheckResult(
-        check_id="ENV-006",
-        name="Backup configuration (GUS_BACKUP_PATH)",
-        severity=severity,
-        ok=ok,
-        details={
-            "configured": True,
-            "backup_path": str(backup_path),
-            "exists": exists,
-        },
+        "ENV-006",
+        "Backup configuration (GUS_BACKUP_PATH)",
+        Severity.INFO if exists else Severity.WARN,
+        exists,
+        {"configured": True, "backup_path": str(backup_path), "exists": exists},
     )
 
 
+# ------------------------------------------------------------
+# Aggregate Runner
+# ------------------------------------------------------------
 def run_checks() -> List[EnvCheckResult]:
-    """
-    Run all environment checks and return structured results.
-    Non-destructive and safe to run on any dev machine.
-    """
     root = _find_project_root()
-
-    checks: List[EnvCheckResult] = []
-    checks.append(check_os_info())
-    checks.append(check_venv_active())
-    checks.append(check_project_root_structure(root))
-    checks.append(check_logs_structure(root))
-    checks.append(check_git_repo(root))
-    checks.append(check_backup_configuration(root))
-
-    return checks
+    return [
+        check_os_info(),
+        check_venv_active(),
+        check_project_root_structure(root),
+        check_logs_structure(root),
+        check_git_repo(root),
+        check_backup_configuration(root),
+    ]
 
 
 def _overall_status(results: List[EnvCheckResult]) -> str:
-    """
-    Derive a simple HUD-level status: OK / WARN / ALERT.
-    """
     if any((not r.ok) and r.severity == Severity.CRITICAL for r in results):
         return "ALERT"
     if any((not r.ok) and r.severity == Severity.WARN for r in results):
@@ -252,21 +203,27 @@ def _overall_status(results: List[EnvCheckResult]) -> str:
     return "OK"
 
 
-def _format_status_line(r: EnvCheckResult) -> str:
-    status_str = "OK" if r.ok else "FAIL"
-    return f"{r.check_id:7} {status_str:5} {r.severity.value:8} {r.name}"
-
-
-def main() -> None:
-    results = run_checks()
-
+def print_results(results: List[EnvCheckResult]) -> None:
     print("🛡  GUS v4 – Environment Verification v0.1\n")
     for r in results:
-        print(_format_status_line(r))
+        status = "OK" if r.ok else "FAIL"
+        print(f"{r.check_id:7} {status:5} {r.severity.value:8} {r.name}")
+    print(f"\nOverall environment status: {_overall_status(results)}")
 
-    overall = _overall_status(results)
-    print(f"\nOverall environment status: {overall}")
 
-
+# ------------------------------------------------------------
+# Exit Code Mapping
+# ------------------------------------------------------------
 if __name__ == "__main__":
-    main()
+    results = run_checks()
+    print_results(results)
+
+    severities = [r.severity for r in results]
+    worst = max(severities) if severities else Severity.INFO
+
+    if worst is Severity.CRITICAL:
+        sys.exit(2)
+    elif worst is Severity.WARN:
+        sys.exit(1)
+    else:
+        sys.exit(0)
