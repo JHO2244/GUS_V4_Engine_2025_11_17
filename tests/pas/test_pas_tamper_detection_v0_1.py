@@ -1,3 +1,19 @@
+# tests/pas/test_pas_tamper_detection_v0_1.py
+
+import sys
+from pathlib import Path
+
+# Ensure project root is on sys.path (2 levels up from tests/pas)
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from pas.pas_hardening_suite_v0_1 import (
+    TamperScenarioResult,
+    Severity,
+    run_all_scenarios,
+)
+
 from pas.pas_hardening_suite_v0_1 import (
     run_all_scenarios,
     TamperScenarioResult,
