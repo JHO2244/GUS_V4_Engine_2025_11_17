@@ -19,3 +19,6 @@ def test_results_are_well_formed_if_present():
         assert isinstance(r.detected, bool)
         assert isinstance(r.details, dict)
         assert isinstance(r.severity, Severity)
+        # v0.2+ extras (non-breaking)
+        assert isinstance(r.scenario_id, str)
+        assert r.scenario_id.startswith("PAS-")
