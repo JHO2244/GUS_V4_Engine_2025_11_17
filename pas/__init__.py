@@ -1,20 +1,21 @@
 """
-PAS package – Phase 3 Hardening & Tamper Detection (v0.1 stubs).
+PAS package initialization.
 
-This module simply re-exports the small public API surface that the
-tests and other layers expect to see.
+Minimal public API for the PAS hardening layer.
 """
 
 from .pas_hardening_suite_v0_1 import (
-    TamperScenarioResult,
-    Severity,
     PAS_HARDENING_VERSION,
+    Severity,
+    TamperScenarioResult,
+    PasCheckResult,
     run_all_scenarios,
 )
 
 __all__ = [
-    "TamperScenarioResult",
-    "Severity",
     "PAS_HARDENING_VERSION",
+    "Severity",
+    "TamperScenarioResult",
+    "PasCheckResult",
     "run_all_scenarios",
 ]
