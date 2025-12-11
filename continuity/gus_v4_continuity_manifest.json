@@ -1,14 +1,15 @@
 {
   "backup_paths": [
-    "Z:\\GuardianBackups\\GUS_V4\\GUS_V4_Engine_2025_11_17_ALL_GREEN_20251210.zip"
+    "Z:\\GuardianBackups\\GUS_V4\\GUS_V4_Engine_2025_11_17_ALL_GREEN_20251210_v2.zip"
   ],
   "engine_version": "GUS_V4_Engine_2025_11_17",
-  "last_all_green_commit": "<PUT-YOUR-NEW-COMMIT-HASH-HERE>",
-  "last_all_green_timestamp": "2025-12-10T11:19:00+02:00",
+  "last_all_green_commit": "<NEW_HASH>",
+  "last_all_green_timestamp": "2025-12-10T14:45:39.330228+00:00",
   "pas_version": "0.2",
   "test_summary": {
     "failed": 0,
-    "passed": 0,
-    "total": 0
+    "passed": 34,
+    "skipped": 1,
+    "total": 34
   }
 }

@@ -1,5 +1,5 @@
 # GUS v4 – PAS v0.2 Overlay Tests (L5–L6 Continuity + Replication)
-# Non-blocking, no I/O, import-only tests
+# Non-blocking, import-only tests
 
 import pytest
 

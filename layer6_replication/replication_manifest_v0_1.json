@@ -1,0 +1,25 @@
+{
+  "manifest_version": "0.1",
+  "targets": [
+    {
+      "id": "core_repo_snapshot",
+      "name": "GUS Core Repository",
+      "source": ".",
+      "mode": "zip",
+      "criticality": "core",
+      "include": ["**/*"],
+      "exclude": [
+        "venv/**",
+        ".git/**",
+        ".pytest_cache/**",
+        "exportToHTML/**"
+      ]
+    }
+  ],
+  "policy": {
+    "frequency": "on_demand",
+    "require_all_green": true,
+    "require_clean_git": false,
+    "max_snapshots": 5
+  }
+}
