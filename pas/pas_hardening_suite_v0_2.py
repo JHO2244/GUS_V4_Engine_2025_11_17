@@ -11,6 +11,8 @@ Callers can choose to keep using v0.1 or opt into v0.2.
 """
 
 from __future__ import annotations
+from pathlib import Path
+from layer5_continuity.continuity_manifest_v0_1 import MANIFEST_PATH, read_manifest
 
 from dataclasses import dataclass, field
 from enum import Enum
@@ -80,6 +82,55 @@ PasCheckResult = TamperScenarioResult
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+def _check_continuity_manifest() -> TamperScenarioResult:
+    """
+    PAS-012: Verify that the L5 continuity manifest exists and is readable.
+
+    This is a *tamper-awareness* check:
+    - status = "OK" / severity = INFO   -> manifest present & readable
+    - status = "ALERT" / severity = ALERT -> manifest missing or unreadable
+
+    It is *observational* in PAS v0.2: it does not break the core engine.
+    """
+    path: Path = MANIFEST_PATH
+    manifest_exists = path.is_file()
+    read_ok = False
+    error: str | None = None
+
+    data = {}
+    if manifest_exists:
+        try:
+            data = read_manifest()
+            # Very light validation: must at least be a dict with backup_paths
+            read_ok = isinstance(data, dict) and "backup_paths" in data
+        except Exception as exc:  # pragma: no cover - defensive
+            error = str(exc)
+            read_ok = False
+
+    # If anything is wrong, we treat this as "tamper or misconfiguration detected".
+    ok = manifest_exists and read_ok
+
+    status = "OK" if ok else "ALERT"
+    severity = Severity.INFO if ok else Severity.ALERT
+    detected = not ok
+
+    return TamperScenarioResult(
+        check_id="PAS-012",
+        name="Continuity manifest presence/readability (L5)",
+        status=status,
+        severity=severity,
+        detected=detected,
+        details={
+            "path": str(path),
+            "manifest_exists": manifest_exists,
+            "read_ok": read_ok,
+            "error": error,
+            "raw_keys": list(data.keys()) if isinstance(data, dict) else None,
+        },
+        scenario_id="PAS-012",
+        component="continuity",
+        tags=["continuity", "layer5", "manifest"],
+    )
 
 
 def _upgrade_result(
@@ -300,6 +351,18 @@ def run_all_scenarios() -> List[TamperScenarioResult]:
     upgraded.append(_build_pas_012_continuity_manifest_presence())
 
     return upgraded
+
+def run_all_scenarios() -> List[TamperScenarioResult]:
+    checks: List[TamperScenarioResult] = []
+
+    # Existing v0.2 checks, if you already added them:
+    # checks.append(_check_git_cleanliness())      # PAS-010
+    # checks.append(_check_pytest_availability())  # PAS-011
+
+    # New continuity manifest check
+    checks.append(_check_continuity_manifest())    # PAS-012
+
+    return checks
 
 
 __all__ = [
