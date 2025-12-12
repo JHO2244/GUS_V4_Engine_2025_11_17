@@ -1,0 +1,19 @@
+{
+  "continuity": {
+    "allow_warning_status": false,
+    "require_green_status": true
+  },
+  "description": "GUS v4 \u2013 default Layer 6 replication policy.",
+  "frequency": "on_demand",
+  "max_snapshots": 7,
+  "policy": {
+    "allow_network_paths": true,
+    "max_targets": 3,
+    "min_targets": 1,
+    "require_airgap": false
+  },
+  "require_all_green": true,
+  "schema": "gus_v4_replication_manifest",
+  "targets": [],
+  "version": "0.1"
+}

@@ -2,16 +2,9 @@
 
 import pytest
 
+from layer5_continuity.continuity_manifest_v0_1 import load_manifest as l5_load_manifest
+
 # Keep this non-fatal: if L5 package isn't visible in some environments, skip.
-try:
-    from layer5_continuity.continuity_manifest_v0_1 import (
-        load_manifest as l5_load_manifest,
-    )
-except ModuleNotFoundError:
-    pytest.skip(
-        "layer5_continuity not importable; skipping PAS v0.2 overlay tests.",
-        allow_module_level=True,
-    )
 
 from layer6_replication.replication_manifest_v0_1 import (
     load_manifest as l6_load_manifest,

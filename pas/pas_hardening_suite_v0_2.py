@@ -332,25 +332,13 @@ def _build_pas_012_continuity_manifest_presence() -> TamperScenarioResult:
 # ---------------------------------------------------------------------------
 
 
-def run_all_scenarios() -> List[TamperScenarioResult]:
-    """Run all configured PAS tamper scenarios (v0.2 view).
+def run_all_scenarios(verbose: bool = False):
+    results = []
+    ...
+    if verbose:
+        print(f"{check_id} {status} …")
+    return results
 
-    The sequence is:
-    1. Run v0.1 scenarios (PAS-000, PAS-001, ...)
-    2. Upgrade them to the v0.2 schema
-    3. Append v0.2-only scenarios PAS-010+
-    """
-    results_v01 = run_all_scenarios_v0_1()
-    upgraded: List[TamperScenarioResult] = [
-        _upgrade_result(r, component="pas", tags=["baseline", "v0.1"])
-        for r in results_v01
-    ]
-
-    upgraded.append(_build_pas_010_git_cleanliness())
-    upgraded.append(_build_pas_011_pytest_available())
-    upgraded.append(_build_pas_012_continuity_manifest_presence())
-
-    return upgraded
 
 def run_all_scenarios() -> List[TamperScenarioResult]:
     checks: List[TamperScenarioResult] = []
