@@ -1,0 +1,24 @@
+{
+  "backup_paths": [
+    "Z:\\GuardianBackups\\GUS_V4"
+  ],
+  "continuity_entries": [
+    {
+      "commit": "UNKNOWN_COMMIT",
+      "id": "bootstrap_all_green",
+      "notes": "Bootstrap continuity snapshot created automatically.",
+      "status": "ok",
+      "timestamp": "UNKNOWN_TIMESTAMP"
+    }
+  ],
+  "engine_version": "GUS_v4.dev",
+  "last_all_green_commit": "UNKNOWN_COMMIT",
+  "last_all_green_timestamp": "UNKNOWN_TIMESTAMP",
+  "pas_version": "PAS_v0.2",
+  "test_summary": {
+    "failed": 0,
+    "passed": 0,
+    "skipped": 0,
+    "total": 0
+  }
+}
