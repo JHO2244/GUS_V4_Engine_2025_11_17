@@ -1,15 +1,18 @@
 {
-  "backup_paths": [
-    "Z:\\GuardianBackups\\GUS_V4\\GUS_V4_Engine_2025_11_17_ALL_GREEN_20251210_v2.zip"
+  "backup_paths": [],
+  "continuity": [
+    {
+      "description": "Default L5 continuity anchor entry.",
+      "id": "root",
+      "layer": "L0-L9",
+      "status": "green"
+    }
   ],
-  "engine_version": "GUS_V4_Engine_2025_11_17",
-  "last_all_green_commit": "<NEW_HASH>",
-  "last_all_green_timestamp": "2025-12-10T14:45:39.330228+00:00",
+  "engine_version": "GUS_V4_Engine",
+  "last_all_green_commit": "",
+  "last_all_green_timestamp": "",
   "pas_version": "0.2",
-  "test_summary": {
-    "failed": 0,
-    "passed": 34,
-    "skipped": 1,
-    "total": 34
-  }
+  "schema": "gus_v4_continuity_manifest",
+  "test_summary": {},
+  "version": "0.1"
 }
