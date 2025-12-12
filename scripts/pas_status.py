@@ -295,10 +295,10 @@ def run_pas_v02_overlay_grid():
     check_pas_015_replication_policy_invariants()
 
 def main():
-    # existing PAS v0.1 / tamper grid call(s)
-    # e.g. run_pas_v0_1_grid() or similar
+    # Base PAS v0.1 grid
+    run_pas_v0_1()
 
-    # --- New overlay, non-blocking ---
+    # PAS v0.2 overlay grid (L5–L6)
     run_pas_v02_overlay_grid()
 
 
