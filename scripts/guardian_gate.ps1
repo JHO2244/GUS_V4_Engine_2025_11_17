@@ -1,93 +1,72 @@
-﻿<#
-GUS v4 — Guardian Gate (PowerShell)
-Purpose: hard-stop if integrity gates fail (compile, tests, PAS status, cleanliness, no tracked archives)
-Usage:   .\scripts\guardian_gate.ps1
+<# 
+GUS v4 - Guardian Gate (PowerShell)
+Gates: compileall + pytest + PAS status + clean working tree (no unstaged/untracked) + no tracked archives
 #>
 
 $ErrorActionPreference = "Stop"
 
-function Fail($msg) {
-    Write-Host "✖ GUARDIAN GATE FAIL: $msg" -ForegroundColor Red
-    exit 1
-}
-function Ok($msg) { Write-Host "✔ $msg" -ForegroundColor Green }
-function Warn($msg) { Write-Host "⚠ $msg" -ForegroundColor Yellow }
+function Fail([string]$msg) { Write-Host "FAIL: $msg" -ForegroundColor Red; exit 1 }
+function Ok([string]$msg)   { Write-Host "OK:   $msg" -ForegroundColor Green }
 
-# Ensure inside git repo
-try { $repoRoot = (git rev-parse --show-toplevel).Trim() }
-catch { Fail "Not inside a git repository." }
-
+try { $repoRoot = (git rev-parse --show-toplevel).Trim() } catch { Fail "Not inside a git repository." }
 Set-Location $repoRoot
 
-Write-Host "🛡  GUS v4 — Guardian Gate (PowerShell)"
+Write-Host "GUS v4 - Guardian Gate (PowerShell)"
 Write-Host "Repo: $repoRoot"
 Write-Host ""
 
-# Prefer venv python if present; else fallback to python in PATH
-$py = Join-Path $repoRoot "venv\Scripts\python.exe"
-if (-not (Test-Path $py)) {
-    $py = "python"
-    Warn "venv\Scripts\python.exe not found; using 'python' from PATH."
-} else {
-    Ok "Using venv python: $py"
-}
+# Prefer venv python if present
+$venvPy = Join-Path $repoRoot "venv\Scripts\python.exe"
+$py = if (Test-Path $venvPy) { $venvPy } else { "python" }
+Ok "Using python: $py"
 
-# 1) Branch check (warn only)
+# Branch strict
 $branch = (git rev-parse --abbrev-ref HEAD).Trim()
-if ($branch -ne "main") { Warn "You are on branch '$branch' (expected 'main')." }
-else { Ok "Branch is main" }
+if ($branch -ne "main") { Fail "Branch is '$branch' (expected 'main')." }
+Ok "Branch is main"
 
-# 2) compileall
+# compileall
 Ok "Running: python -m compileall ."
 & $py -m compileall . | Out-Null
 Ok "compileall OK"
 
-# 3) pytest (use python -m so PATH doesn't matter)
-Ok "Running: python -m pytest -rs"
-& $py -m pytest -rs
+# pytest (basetemp inside repo, avoids WinError 5 in temp)
+Ok "Running: python -m pytest -rs --basetemp .pytest_tmp"
+& $py -m pytest -rs --basetemp .pytest_tmp
 Ok "pytest OK"
 
-# 4) PAS status must be OK and exit 0
+# PAS status
 Ok "Running: python -m scripts.pas_status"
-
-$pasRaw = & $py -m scripts.pas_status 2>&1
-$pasOut = ($pasRaw | Out-String)
-
-if ($LASTEXITCODE -ne 0) {
-    Fail "PAS status command failed (exit $LASTEXITCODE). Output:`n$pasOut"
-}
-
-# Normalize whitespace/line breaks to survive encoding + single-line squashing
-$norm = ($pasOut -replace "`r","`n")
-$norm = ($norm -replace '\s+', ' ')
-
-if ($norm -notmatch "Overall PAS status:\s*OK") {
-    Fail "PAS status not OK. Output:`n$pasOut"
-}
-
+$pasOut = & $py -m scripts.pas_status 2>&1
+if ($LASTEXITCODE -ne 0) { Fail "PAS status command failed (exit $LASTEXITCODE). Output:`n$pasOut" }
+if ($pasOut -notmatch "Overall PAS status:\s*OK") { Fail "PAS status not OK. Output:`n$pasOut" }
 Ok "PAS status OK"
 
-# 5) Clean tree
-Ok "Checking: git status --porcelain"
-$status = (git status --porcelain)
-if ($status -and $status.Trim().Length -gt 0) {
-    Write-Host ""
-    Write-Host $status
-    Write-Host ""
-    Fail "Working tree not clean. Commit or stash changes."
-}
-Ok "Working tree clean"
+# Clean working tree rules for commits:
+# - allow staged changes
+# - block unstaged changes
+# - block untracked files
+Ok "Checking: no unstaged changes"
+& git diff --quiet
+if ($LASTEXITCODE -ne 0) { Fail "Unstaged changes detected. Stage or stash them." }
+Ok "No unstaged changes"
 
-# 6) No tracked zips
+Ok "Checking: no untracked files"
+$untracked = & git ls-files --others --exclude-standard
+if ($untracked -and $untracked.Trim().Length -gt 0) {
+  Write-Host $untracked
+  Fail "Untracked files detected. Add/ignore/stash them."
+}
+Ok "No untracked files"
+
+# No tracked archives
 Ok "Checking: no tracked .zip files"
 $zips = (git ls-files) | Select-String -Pattern '\.zip$' -CaseSensitive:$false
 if ($zips) {
-    Write-Host ""
-    $zips | ForEach-Object { Write-Host $_.Line }
-    Write-Host ""
-    Fail "Tracked .zip files detected. Remove from index + keep ignored."
+  $zips | ForEach-Object { Write-Host $_.Line }
+  Fail "Tracked .zip files detected. Remove from index: git rm --cached <file> and ensure .gitignore blocks it."
 }
 Ok "No tracked zips"
 
 Write-Host ""
-Write-Host "✅ GUARDIAN GATE PASS: compileall + pytest + PAS + clean tree + no tracked archives" -ForegroundColor Green
+Write-Host "PASS: compileall + pytest + PAS + clean working tree + no tracked archives" -ForegroundColor Green

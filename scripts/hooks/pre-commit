@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# GUS v4 — pre-commit Guardian Gate hook (template)
+# Installs into: .git/hooks/pre-commit
+# Policy:
+# - Prefer bash gate if present
+# - Else use PowerShell gate (powershell.exe or pwsh)
+
+set -euo pipefail
+
+RED=$'\033[31m'; GRN=$'\033[32m'; RST=$'\033[0m'
+die() { echo "${RED}✖ PRE-COMMIT BLOCKED:${RST} $*" 1>&2; exit 1; }
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || die "Not inside a git repository."
+cd "$repo_root"
+
+echo "🛡  pre-commit: Guardian Gate"
+echo "Repo: $repo_root"
+
+# Prefer bash gate if it exists
+if [[ -f "scripts/guardian_gate.sh" ]]; then
+  echo "→ Running: bash scripts/guardian_gate.sh"
+  bash scripts/guardian_gate.sh || die "Guardian Gate failed."
+  echo "${GRN}✓ Guardian Gate passed${RST}"
+  exit 0
+fi
+
+# PowerShell fallback (Windows-friendly names)
+if [[ -f "scripts/guardian_gate.ps1" ]]; then
+  if command -v powershell.exe >/dev/null 2>&1; then
+    echo "🛡  pre-commit: running PowerShell Guardian Gate (powershell.exe)..."
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\\guardian_gate.ps1" || die "Guardian Gate failed."
+    echo "${GRN}✓ Guardian Gate passed${RST}"
+    exit 0
+  elif command -v pwsh >/dev/null 2>&1; then
+    echo "🛡  pre-commit: running PowerShell Guardian Gate (pwsh)..."
+    pwsh -NoProfile -ExecutionPolicy Bypass -File "scripts/guardian_gate.ps1" || die "Guardian Gate failed."
+    echo "${GRN}✓ Guardian Gate passed${RST}"
+    exit 0
+  else
+    die "PowerShell not found (powershell.exe/pwsh)."
+  fi
+fi
+
+die "No gate script found. Expected scripts/guardian_gate.sh or scripts/guardian_gate.ps1"

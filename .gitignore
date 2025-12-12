@@ -48,3 +48,6 @@ pas_phase2_sample_seal.json
 # Generated output
 /exportToHTML/
 /logs/
+
+# pytest temp
+.pytest_tmp/

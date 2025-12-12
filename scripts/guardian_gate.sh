@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # GUS v4 — Guardian Gate (Git Bash)
-# Purpose: hard-stop if integrity gates fail (compile, tests, PAS status, cleanliness, no tracked archives)
-# Usage:   ./scripts/guardian_gate.sh
+# Purpose: hard-stop if integrity gates fail
+# Gates: compileall + pytest + PAS status + clean working tree (no unstaged/untracked) + no tracked archives
 
 set -euo pipefail
 
@@ -10,65 +10,55 @@ GRN=$'\033[32m'
 YLW=$'\033[33m'
 RST=$'\033[0m'
 
-die() {
-  echo "${RED}✖ GUARDIAN GATE FAIL:${RST} $*" 1>&2
-  exit 1
-}
+die() { echo "${RED}✖ GUARDIAN GATE FAIL:${RST} $*" 1>&2; exit 1; }
+ok()  { echo "${GRN}✔${RST} $*"; }
+warn(){ echo "${YLW}⚠${RST} $*"; }
 
-ok() { echo "${GRN}✔${RST} $*"; }
-warn() { echo "${YLW}⚠${RST} $*"; }
-
-# Ensure we are in a git repo
-git rev-parse --show-toplevel >/dev/null 2>&1 || die "Not inside a git repository."
-
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || die "Not inside a git repository."
+cd "$repo_root"
 
 echo "🛡  GUS v4 — Guardian Gate (Git Bash)"
-echo "Repo: $REPO_ROOT"
-echo
+echo "Repo: $repo_root"
+echo ""
 
-# 1) Branch check (warn only)
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-if [[ "$BRANCH" != "main" ]]; then
-  warn "You are on branch '$BRANCH' (expected 'main')."
-else
-  ok "Branch is main"
-fi
+# 1) Branch check (strict)
+branch="$(git rev-parse --abbrev-ref HEAD)"
+[[ "$branch" == "main" ]] || die "Branch is '$branch' (expected 'main')."
+
+ok "Branch is main"
 
 # 2) compileall
 ok "Running: python -m compileall ."
-python -m compileall . >/dev/null || die "compileall failed."
+python -m compileall . >/dev/null
 
-# 3) pytest (use python -m so it works even if pytest isn't on PATH)
-ok "Running: python -m pytest -rs"
-python -m pytest -rs || die "pytest failed."
+# 3) pytest (force basetemp inside repo to reduce Windows temp locking noise)
+ok "Running: python -m pytest -rs --basetemp .pytest_tmp"
+python -m pytest -rs --basetemp .pytest_tmp
 
-# 4) PAS status
+# 4) PAS status must be OK (exit 0 + contains OK)
 ok "Running: python -m scripts.pas_status"
-PAS_OUT="$(python -m scripts.pas_status 2>&1)" || die "PAS status command failed. Output:\n$PAS_OUT"
-echo "$PAS_OUT" | grep -Fq "Overall PAS status: OK" || die "PAS status not OK. Output:\n$PAS_OUT"
+pas_out="$(python -m scripts.pas_status 2>&1)" || die "PAS status command failed."
+echo "$pas_out"
+echo "$pas_out" | grep -Eq "Overall PAS status:\s*OK" || die "PAS status not OK."
+
 ok "PAS status OK"
 
-# 5) Clean tree
-ok "Checking: git status --porcelain"
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo
-  git status --porcelain
-  echo
-  die "Working tree not clean. Commit or stash changes."
-fi
-ok "Working tree clean"
+# 5) Working tree must have NO unstaged changes and NO untracked files
+ok "Checking: no unstaged changes"
+git diff --quiet || die "Unstaged changes detected. Stage or stash them."
 
-# 6) No tracked zips
+ok "Checking: no untracked files"
+untracked="$(git ls-files --others --exclude-standard || true)"
+[[ -z "$untracked" ]] || { echo "$untracked"; die "Untracked files detected. Add/ignore/stash them."; }
+
+ok "Working tree clean (unstaged/untracked)"
+
+# 6) No tracked archives (.zip)
 ok "Checking: no tracked .zip files"
-if git ls-files | grep -Ei '\.zip$' >/dev/null 2>&1; then
-  echo
-  git ls-files | grep -Ei '\.zip$' || true
-  echo
-  die "Tracked .zip files detected. Remove from index + keep ignored."
-fi
+tracked_zips="$(git ls-files | grep -Ei '\.zip$' || true)"
+[[ -z "$tracked_zips" ]] || { echo "$tracked_zips"; die "Tracked .zip files detected. Remove from index (git rm --cached <file>) and keep ignored."; }
+
 ok "No tracked zips"
 
-echo
-echo "${GRN}✅ GUARDIAN GATE PASS:${RST} compileall + pytest + PAS + clean tree + no tracked archives"
+echo ""
+echo "${GRN}✅ GUARDIAN GATE PASS:${RST} compileall + pytest + PAS + clean working tree + no tracked archives"
