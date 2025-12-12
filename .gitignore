@@ -51,3 +51,6 @@ pas_phase2_sample_seal.json
 
 # pytest temp
 .pytest_tmp/
+
+# repo seal snapshots
+seals/*.json
