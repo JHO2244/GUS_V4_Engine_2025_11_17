@@ -35,3 +35,29 @@ PAS v0.2 is present as an overlay diagnostic layer.
     "Distribution hardening: avoid shipping .git/ and venv/ in release zips."
   ]
 }
+{
+  "gus_v4_phase": "Option A stabilization complete (OBSERVATIONAL PAS v0.2)",
+  "date_local": "2025-12-12",
+  "timezone": "UTC+10:22 (Cape Town, South Africa)",
+  "repo": "GUS_V4_Engine_2025_11_17",
+  "branch": "main",
+  "head_commits": [
+    "b8cb60c (fix: make pas_status runnable; package scripts + stable imports)",
+    "6c2ec85 (docs: lock Option A PAS v0.2 observational posture + checkpoint seal)",
+    "517c646 (chore: align replication/pas v0.2 internals (no posture promotion))"
+  ],
+  "tests": {
+    "passed": 39,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 2,
+    "skip_reason": "PAS v0.2 overlay tests intentionally skipped in Option A observational mode"
+  },
+  "status": "GREEN",
+  "posture": "PAS v0.2 OBSERVATIONAL (non-blocking)",
+  "pas_status": {
+    "pas_v0_1": "ACTIVE",
+    "pas_v0_2": "OBSERVATIONAL",
+    "overlay_grid_checks": "OK"
+  }
+}

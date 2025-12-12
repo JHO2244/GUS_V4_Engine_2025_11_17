@@ -41,3 +41,10 @@ Thumbs.db
 layer1_integrity_core/L1_integrity_status.json
 layer1_integrity_core/chain/*.json
 pas_phase2_sample_seal.json
+
+# Archives
+*.zip
+
+# Generated output
+/exportToHTML/
+/logs/
