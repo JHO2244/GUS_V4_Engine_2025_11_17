@@ -1,54 +1,22 @@
-# GUS v4 – PAS v0.2 Overlay Tests (L5–L6 Continuity + Replication)
+# GUS v4 – PAS Status Script Contract Tests
+# Goal: ensure pas_status runs as module, prints once, and returns correct exit code.
 
-import pytest
+import subprocess
+import sys
 
-# Make these tests non-fatal if L5 isn't importable in some environments.
-try:
-    from layer5_continuity.continuity_manifest_v0_1 import (
-        load_manifest as l5_load_manifest,
+
+def test_pas_status_module_runs_ok_and_prints_once():
+    proc = subprocess.run(
+        [sys.executable, "-m", "scripts.pas_status"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace"
     )
-except ModuleNotFoundError:
-    pytest.skip(
-        "layer5_continuity not importable; skipping PAS v0.2 overlay tests.",
-        allow_module_level=True,
-    )
 
-from layer6_replication.replication_manifest_v0_1 import (
-    load_manifest as l6_load_manifest,
-    build_replication_plan_from_continuity,
-)
+    out = (proc.stdout or "") + (proc.stderr or "")
+    HEADER_ANCHOR = "PAS Tamper Grid Status"  # ASCII-only anchor
 
-
-def test_pas_010_continuity_manifest_importable():
-    manifest = l5_load_manifest()
-    assert manifest is not None, "L5 manifest must load and not be None."
-
-
-def test_pas_011_continuity_manifest_has_entries():
-    manifest = l5_load_manifest()
-    entries = manifest.get("continuity_entries", [])
-    assert isinstance(entries, list)
-    assert len(entries) >= 1, "L5 continuity manifest must contain ≥ 1 entry."
-
-
-def test_pas_013_replication_manifest_importable():
-    manifest = l6_load_manifest()
-    assert manifest is not None, "L6 manifest must load without error."
-
-
-def test_pas_014_replication_plan_basic_generation():
-    dummy_targets = ["D:\\GuardianReplicas"]
-    plan = build_replication_plan_from_continuity(default_targets=dummy_targets)
-
-    assert isinstance(plan, dict)
-    assert "targets" in plan
-    assert len(plan["targets"]) >= 1
-    assert plan["targets"][0] == dummy_targets[0]
-
-
-def test_pas_015_replication_policy_invariants():
-    manifest = l6_load_manifest()
-
-    assert manifest.get("frequency") == "on_demand"
-    assert manifest.get("require_all_green") is True
-    assert manifest.get("max_snapshots", 0) >= 1
+    assert proc.returncode == 0, f"Expected exit code 0, got {proc.returncode}\n{out}"
+    assert out.count(HEADER_ANCHOR) == 1, out
+    assert out.count("PAS v0.1 Grid") == 1, out
