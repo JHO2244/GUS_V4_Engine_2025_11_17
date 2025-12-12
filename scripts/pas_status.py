@@ -1,6 +1,15 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+
+# Allow running as "python scripts/pas_status.py" from repo root without PYTHONPATH.
+# This does NOT promote PAS v0.2; it only fixes import resolution for the status script.
+_repo_root = Path(__file__).resolve().parents[1]
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
+import sys
 from typing import List
 
 from pas.pas_hardening_suite_v0_1 import (
