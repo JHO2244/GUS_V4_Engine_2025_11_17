@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# --- recursion / double-invocation guard ---
+if [[ "${GUS_GUARDIAN_GATE_RUNNING-}" == "1" ]]; then
+  echo "✖ BLOCKED: Guardian Gate recursion detected."
+  exit 1
+fi
+export GUS_GUARDIAN_GATE_RUNNING=1
+# -----------------------------------------
+
+
 MODE="normal"
 if [[ "${1-}" == "--pre-commit" ]]; then
   MODE="pre-commit"
