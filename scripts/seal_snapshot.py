@@ -13,6 +13,10 @@ from pathlib import Path
 OUT_DIR = Path("seals")
 LOCK_FILE = Path("requirements.lock.txt")
 
+def to_posix(s: str) -> str:
+    bs = chr(92)  # backslash
+    return s.replace(bs, "/")
+
 def run(cmd: list[str]) -> str:
     p = subprocess.run(cmd, capture_output=True, text=True)
     if p.returncode != 0:
@@ -59,13 +63,13 @@ def main() -> int:
         "gus": {"version": "v4", "artifact": "repo_seal_snapshot"},
         "timestamp_utc": now_utc,
         "git": {
-            "repo_root": repo_root.replace("\\", "/"),
+            "repo_root": to_posix(repo_root),
             "branch": branch,
             "commit": commit,
             "working_tree_clean": clean,
         },
         "python": {
-            "executable": sys.executable.replace("\\", "/"),
+            "executable": to_posix(sys.executable),
             "version": sys.version.split()[0],
             "platform": platform.platform(),
         },

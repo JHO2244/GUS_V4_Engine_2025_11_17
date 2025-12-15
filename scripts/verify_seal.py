@@ -259,9 +259,6 @@ def verify_seal(repo_root: str, seal_path: str, rev: str, allow_dirty: bool) -> 
             },
         )
 
-
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(prog="verify_seal.py")
 
