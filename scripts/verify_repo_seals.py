@@ -16,7 +16,9 @@ def repo_root() -> Path:
     return Path(sh(["git", "rev-parse", "--show-toplevel"]))
 
 def head_short() -> str:
-    return sh(["git", "rev-parse", "--short", "HEAD"])
+    # Match seal_snapshot naming (12 chars)
+    return sh(["git", "rev-parse", "--short=12", "HEAD"])
+
 
 def list_seals(seals_dir: Path) -> list[Path]:
     if not seals_dir.exists():
