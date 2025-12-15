@@ -7,7 +7,11 @@ import subprocess
 from pathlib import Path
 import sys
 
-SEALS_DIR = Path("seals")
+def repo_root() -> Path:
+    return Path(sh(["git", "rev-parse", "--show-toplevel"]))
+
+SEALS_DIR = repo_root() / "seals"
+
 SEAL_RE = re.compile(r"^seal_([0-9a-fA-F]+)_(\d{8,})\.json$")  # timestamp len flexible
 
 

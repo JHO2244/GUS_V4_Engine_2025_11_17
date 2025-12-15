@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
 # --- recursion guard (SINGLE, authoritative) ---
 if [[ "${GUS_GUARDIAN_GATE_RUNNING:-0}" == "1" ]]; then
   echo "✖ BLOCKED: Guardian Gate recursion detected."
