@@ -1,55 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- recursion / double-invocation guard ---
-if [[ "${GUS_GUARDIAN_GATE_RUNNING-}" == "1" ]]; then
+# --- recursion guard (SINGLE, authoritative) ---
+if [[ "${GUS_GUARDIAN_GATE_RUNNING:-0}" == "1" ]]; then
   echo "✖ BLOCKED: Guardian Gate recursion detected."
   exit 1
 fi
 export GUS_GUARDIAN_GATE_RUNNING=1
-# -----------------------------------------
-
+trap 'unset GUS_GUARDIAN_GATE_RUNNING' EXIT
 
 MODE="normal"
-if [[ "${1-}" == "--pre-commit" ]]; then
+if [[ "${1:-}" == "--pre-commit" ]]; then
   MODE="pre-commit"
-  shift || true
 fi
 
-echo "🛡 ${MODE}: Guardian Gate"
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-echo "Repo: ${REPO_ROOT}"
+die() { echo "✖ $*" >&2; exit 1; }
 
 check_working_tree_cleanliness() {
-  echo "🛡 Checking working tree cleanliness"
-
-  # 1) Always block on UNSTAGED drift (hidden edits)
+  # Always block on unstaged drift (hidden edits)
   if ! git diff --quiet; then
-    echo "✖ BLOCKED: Unstaged changes present (git diff)."
-    exit 1
+    die "Unstaged changes present. Stage or discard them first."
   fi
 
-  # 2) Staged changes:
-  #    - pre-commit: expected → warn only
-  #    - normal: should be clean → block
+  # Staged changes are expected during pre-commit
   if ! git diff --cached --quiet; then
     if [[ "${MODE}" == "pre-commit" ]]; then
-      echo "⚠ Note: Staged changes detected (expected during pre-commit)."
+      echo "ℹ Staged changes detected (expected during pre-commit)."
     else
-      echo "✖ BLOCKED: Staged but uncommitted changes present (git diff --cached)."
-      exit 1
+      die "Staged but uncommitted changes present. Commit them or reset the index."
     fi
   fi
-
-  echo "✔ Working tree cleanliness OK (no unstaged deltas)"
 }
-
-# --- IMPORTANT: prevent self-invocation recursion ---
-# If your script contains any line like:
-#   bash scripts/guardian_gate.sh
-# delete it. The gate should run checks directly, not re-run itself.
-# ---------------------------------------------------
-
-# ... keep the rest of your checks, then call:
-check_working_tree_cleanliness
-
