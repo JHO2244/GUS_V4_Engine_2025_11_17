@@ -1,124 +1,87 @@
-# scripts/verify_repo_seals.py
 from __future__ import annotations
 
 import argparse
-import re
 import subprocess
 from pathlib import Path
 import sys
 
-def repo_root() -> Path:
-    return Path(sh(["git", "rev-parse", "--show-toplevel"]))
-
-SEALS_DIR = repo_root() / "seals"
-
-SEAL_RE = re.compile(r"^seal_([0-9a-fA-F]+)_(\d{8,})\.json$")  # timestamp len flexible
-
-
-def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, text=True, capture_output=True)
-
+def run(cmd: list[str]) -> int:
+    p = subprocess.run(cmd, text=True)
+    return p.returncode
 
 def sh(cmd: list[str]) -> str:
-    p = subprocess.run(cmd, text=True, capture_output=True)
-    if p.returncode != 0:
-        raise SystemExit(f"✖ Command failed: {' '.join(cmd)}\n{p.stderr.strip()}")
-    return p.stdout.strip()
+    return subprocess.check_output(cmd, text=True).strip()
 
+def repo_root() -> Path:
+    return Path(sh(["git", "rev-parse", "--show-toplevel"]))
 
 def head_short() -> str:
     return sh(["git", "rev-parse", "--short", "HEAD"])
 
-
-def list_seals() -> list[Path]:
-    if not SEALS_DIR.exists():
+def list_seals(seals_dir: Path) -> list[Path]:
+    if not seals_dir.exists():
         return []
-    seals = []
-    for p in SEALS_DIR.glob("seal_*_*.json"):
-        m = SEAL_RE.match(p.name)
-        if m:
-            seals.append((m.group(2), p))  # timestamp string
-    # sort by timestamp then name (stable)
-    seals.sort(key=lambda t: (t[0], t[1].name))
-    return [p for _, p in seals]
+    # seal_<short>_<timestamp>.json
+    return sorted(seals_dir.glob("seal_*_*.json"))
 
-
-def find_latest_seal_for_short_hash(short_hash: str) -> Path | None:
-    seals = list_seals()
+def find_latest_seal_for_short_hash(seals: list[Path], short_hash: str) -> Path | None:
     matches = [p for p in seals if p.name.startswith(f"seal_{short_hash}_")]
     return matches[-1] if matches else None
 
-
-def module_exists(mod: str) -> bool:
-    p = run([sys.executable, "-c", f"import importlib; importlib.import_module('{mod}')"])
-    return p.returncode == 0
-
-
-def verify_one(seal_path: Path, verify_sig: bool, strict_sig: bool) -> None:
+def verify_one(seal_path: Path, verify_sig: bool) -> None:
     if not seal_path.exists():
         raise SystemExit(f"✖ Seal file missing: {seal_path}")
 
-    # 1) Structural + content verification
-    p = run([sys.executable, "-m", "scripts.verify_seal", str(seal_path)])
-    if p.returncode != 0:
-        raise SystemExit(
-            f"✖ verify_seal failed for {seal_path.name}\n{p.stdout.strip()}\n{p.stderr.strip()}"
-        )
+    rc = run([sys.executable, "-m", "scripts.verify_seal", str(seal_path)])
+    if rc != 0:
+        raise SystemExit(f"✖ verify_seal failed for {seal_path.name}")
 
-    # 2) Signature verification (optional)
     if verify_sig:
-        if not module_exists("scripts.verify_seal_signature"):
-            msg = "✖ scripts.verify_seal_signature not found/importable."
-            if strict_sig:
-                raise SystemExit(msg)
-            print(f"⚠ {msg} (continuing because --strict-sig not set)")
-        else:
-            p = run([sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path)])
-            if p.returncode != 0:
-                raise SystemExit(
-                    f"✖ verify_seal_signature failed for {seal_path.name}\n{p.stdout.strip()}\n{p.stderr.strip()}"
-                )
+        # optional module; if missing, fail hard (Guardian-grade)
+        rc = run([sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path)])
+        if rc != 0:
+            raise SystemExit(f"✖ verify_seal_signature failed for {seal_path.name}")
 
     print(f"✔ OK: {seal_path.name}")
-
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="GUS v4: Verify repo seals (HEAD or last N).")
     ap.add_argument("--head", action="store_true", help="verify latest seal for HEAD")
     ap.add_argument("--last", type=int, default=0, help="verify last N seals (chronological)")
     ap.add_argument("--no-sig", action="store_true", help="skip signature verification")
-    ap.add_argument("--strict-sig", action="store_true", help="fail if signature verifier missing")
     args = ap.parse_args()
 
     verify_sig = not args.no_sig
-    seals = list_seals()
+    seals_dir = repo_root() / "seals"
+    seals = list_seals(seals_dir)
+
     if not seals:
-        raise SystemExit("✖ No seals found in ./seals/")
+        raise SystemExit(f"✖ No seals found in {seals_dir}")
 
-    did_any = False
-
-    if args.head or (not args.head and args.last == 0):
+    if args.head:
         hs = head_short()
-        p = find_latest_seal_for_short_hash(hs)
+        p = find_latest_seal_for_short_hash(seals, hs)
         if not p:
             raise SystemExit(f"✖ No seal found for HEAD short hash: {hs}")
         print(f"→ Verifying HEAD seal: {p}")
-        verify_one(p, verify_sig=verify_sig, strict_sig=args.strict_sig)
-        did_any = True
+        verify_one(p, verify_sig)
 
     if args.last > 0:
         batch = seals[-args.last:]
         print(f"→ Verifying last {len(batch)} seal(s)")
         for p in batch:
-            verify_one(p, verify_sig=verify_sig, strict_sig=args.strict_sig)
-        did_any = True
+            verify_one(p, verify_sig)
 
-    if not did_any:
-        raise SystemExit("✖ Nothing to verify (unexpected argument state).")
+    if not args.head and args.last == 0:
+        hs = head_short()
+        p = find_latest_seal_for_short_hash(seals, hs)
+        if not p:
+            raise SystemExit(f"✖ No seal found for HEAD short hash: {hs}")
+        print(f"→ Verifying HEAD seal (default): {p}")
+        verify_one(p, verify_sig)
 
     print("✅ Seal verification complete.")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
