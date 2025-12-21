@@ -34,3 +34,31 @@ check_working_tree_cleanliness() {
     fi
   fi
 }
+
+# -------------------------
+# Main
+# -------------------------
+echo "🛡 ${MODE}: Guardian Gate"
+echo "Repo: ${REPO_ROOT}"
+
+if [[ "${MODE}" == "pre-commit" ]]; then
+  check_working_tree_cleanliness
+  echo "✅ pre-commit gate passed."
+  exit 0
+fi
+
+# Normal mode: full audit
+check_working_tree_cleanliness
+
+# Signature policy:
+# - Default: relaxed (allows untracked seals/*.sig only)
+# - If GUS_STRICT_SEALS=1 → strict (requires signature and clean tree)
+if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
+  echo "🛡 Verifying seals (HEAD) [sig-strict]"
+  python -m scripts.verify_repo_seals --head --sig-strict
+else
+  echo "🛡 Verifying seals (HEAD) [sig-relaxed]"
+  python -m scripts.verify_repo_seals --head --sig-relaxed
+fi
+
+echo "✅ normal gate passed."
