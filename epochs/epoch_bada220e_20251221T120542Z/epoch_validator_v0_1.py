@@ -22,6 +22,7 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+PYTHON = sys.executable
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = Path(__file__).with_name("epoch_manifest_v0_1.json")
