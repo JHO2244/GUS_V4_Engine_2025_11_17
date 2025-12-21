@@ -1,0 +1,89 @@
+{
+  "gus_version": "v4",
+  "artifact_type": "epoch_manifest",
+  "artifact_version": "0.1",
+  "status": "DRAFT",
+  "epoch": {
+    "epoch_id": "epoch_bada220e_20251221T120542Z",
+    "date_utc": "2025-12-21",
+    "head_commit": "bada220e099d25fedf6e74c030e376b1c2cb2087",
+    "head_abbrev": "bada220e",
+    "seal_json": "seals/seal_bada220e099d_20251221T120542Z.json",
+    "seal_sig": "seals/seal_bada220e099d_20251221T120542Z.json.sig",
+    "seal_sig_tracked": false,
+    "branch": "main"
+  },
+  "policy": {
+    "verification_modes": {
+      "content_strict": {
+        "command": "python -m scripts.verify_repo_seals --head --no-sig",
+        "requires_clean_tree": true,
+        "notes": "Fails if working tree is dirty; expected when untracked seals/*.sig exists."
+      },
+      "sig_relaxed": {
+        "command": "python -m scripts.verify_repo_seals --head --sig-relaxed",
+        "requires_clean_tree": false,
+        "allowed_dirty_paths": [
+          "seals/*.sig"
+        ],
+        "notes": "Allows only untracked seals/*.sig and validates signature."
+      }
+    },
+    "lock_method": {
+      "command": "bash scripts/LOCK_EPOCH.sh --priv \"Z:/GuardianKeys/gus_seal_signing_ed25519_priv.pem\"",
+      "key_handling": "offline_private_key",
+      "sig_commit_policy": "sig_untracked_to_prevent_recursion"
+    }
+  },
+  "invariants": [
+    {
+      "id": "EPOCH-INV-01",
+      "name": "Epoch head immutability",
+      "rule": "epoch.head_commit must match git HEAD for this epoch directory; changes require new epoch_id.",
+      "severity": "BLOCK"
+    },
+    {
+      "id": "EPOCH-INV-02",
+      "name": "Seal file binding",
+      "rule": "epoch.seal_json must correspond to epoch.head_commit and must verify via verify_repo_seals.",
+      "severity": "BLOCK"
+    },
+    {
+      "id": "EPOCH-INV-03",
+      "name": "Dirty tree exception is narrow",
+      "rule": "If verification runs with allow-dirty, the only permitted untracked paths are seals/*.sig.",
+      "severity": "BLOCK"
+    },
+    {
+      "id": "EPOCH-INV-04",
+      "name": "No secret material in repo",
+      "rule": "No private keys, passphrases, or sensitive tokens may be stored in tracked files.",
+      "severity": "BLOCK"
+    }
+  ],
+  "acceptance_gates": [
+    {
+      "id": "EPOCH-GATE-01",
+      "name": "Seal verifies",
+      "check": "python -m scripts.verify_repo_seals --head --sig-relaxed",
+      "pass_criteria": "Exit code 0, 'OK: seal verification passed' and 'OK: signature valid'.",
+      "severity": "BLOCK"
+    },
+    {
+      "id": "EPOCH-GATE-02",
+      "name": "Repo tests green",
+      "check": "pytest",
+      "pass_criteria": "Exit code 0.",
+      "severity": "BLOCK"
+    }
+  ],
+  "notes": {
+    "intent": "Define the epoch boundary and its invariants so future phases can reference a stable anchor.",
+    "change_control": "Edits to this manifest require review and must not weaken invariants without explicit decision."
+  },
+  "provenance": {
+    "created_by": "JHO",
+    "assistant_role": "translator_risk_detector_integrity_checker",
+    "created_utc": "2025-12-21T12:05:42Z"
+  }
+}
