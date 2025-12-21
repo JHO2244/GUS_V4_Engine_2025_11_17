@@ -29,6 +29,15 @@ MANIFEST_PATH = Path(__file__).with_name("epoch_manifest_v0_1.json")
 
 
 def run(cmd: list[str]) -> tuple[int, str]:
+    """
+    Run a command from repo root.
+
+    Guardian rule: never rely on PATH for Python.
+    If the command starts with 'python', force the active interpreter (sys.executable).
+    """
+    if cmd and cmd[0].lower() == "python":
+        cmd = [sys.executable, *cmd[1:]]
+
     p = subprocess.run(
         cmd,
         cwd=str(REPO_ROOT),
