@@ -20,7 +20,7 @@ fi
 die() { echo "✖ $*" >&2; exit 1; }
 
 check_working_tree_cleanliness() {
-  # Always block on unstaged drift (hidden edits)
+  # Unstaged drift (including untracked?) is handled by git diff; untracked doesn't count here.
   if ! git diff --quiet; then
     die "Unstaged changes present. Stage or discard them first."
   fi
@@ -35,30 +35,24 @@ check_working_tree_cleanliness() {
   fi
 }
 
-# -------------------------
-# Main
-# -------------------------
 echo "🛡 ${MODE}: Guardian Gate"
 echo "Repo: ${REPO_ROOT}"
 
+check_working_tree_cleanliness
+
 if [[ "${MODE}" == "pre-commit" ]]; then
-  check_working_tree_cleanliness
+  # FAST gate: no heavy calls, no signatures, no seal verification
   echo "✅ pre-commit gate passed."
   exit 0
 fi
 
-# Normal mode: full audit
-check_working_tree_cleanliness
-
-# Signature policy:
-# - Default: relaxed (allows untracked seals/*.sig only)
-# - If GUS_STRICT_SEALS=1 → strict (requires signature and clean tree)
+# NORMAL gate:
+# Default = content-only verification (no signature) so we don't create infinite signing loops.
+# If you want strict signatures, set GUS_STRICT_SEALS=1 explicitly.
 if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
-  echo "🛡 Verifying seals (HEAD) [sig-strict]"
   python -m scripts.verify_repo_seals --head --sig-strict
 else
-  echo "🛡 Verifying seals (HEAD) [sig-relaxed]"
-  python -m scripts.verify_repo_seals --head --sig-relaxed
+  python -m scripts.verify_repo_seals --head --no-sig
 fi
 
 echo "✅ normal gate passed."
