@@ -64,6 +64,13 @@ echo "🧷 Repo:  $REPO_ROOT"
 echo "🧷 HEAD:  $(git rev-parse HEAD)"
 echo "🧷 Seal:  $SEAL"
 
+if [[ -z "$SEAL" ]]; then
+  echo "ℹ No HEAD seal found; generating one now..."
+  python -m scripts.seal_snapshot >/dev/null
+  SEAL="$(ls -1 "$SEALS_DIR"/seal_"$SHORT"_*.json 2>/dev/null | sort | tail -n 1 || true)"
+  [[ -n "$SEAL" ]] || die "Still no seal for HEAD after snapshot."
+fi
+
 # Sign
 ./venv/Scripts/python -m scripts.sign_seal_signature "$SEAL" --priv "$PRIV"
 
