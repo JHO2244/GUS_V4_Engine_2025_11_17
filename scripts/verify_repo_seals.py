@@ -1,16 +1,16 @@
+# scripts/verify_repo_seals.py
 from __future__ import annotations
 
 import argparse
 import subprocess
-from pathlib import Path
 import sys
+from pathlib import Path
 
 DEFAULT_PUBKEY = Path("keys/gus_seal_signing_ed25519_pub.pem")
 
 
 def run(cmd: list[str]) -> int:
-    p = subprocess.run(cmd, text=True)
-    return p.returncode
+    return subprocess.run(cmd, text=True).returncode
 
 
 def sh(cmd: list[str]) -> str:
@@ -25,80 +25,73 @@ def head_short_12() -> str:
     return sh(["git", "rev-parse", "--short=12", "HEAD"])
 
 
-def list_seals(seals_dir: Path) -> list[Path]:
-    if not seals_dir.exists():
+def seals_dir(root: Path) -> Path:
+    return root / "seals"
+
+
+def list_seals(sd: Path) -> list[Path]:
+    if not sd.exists():
         return []
-    return sorted(seals_dir.glob("seal_*_*.json"))
+    return sorted(sd.glob("seal_*_*.json"))
 
 
-def find_latest_seal_for_short_hash(seals: list[Path], short_hash: str) -> Path | None:
+def latest_seal_for_short_hash(seals: list[Path], short_hash: str) -> Path | None:
     matches = [p for p in seals if p.name.startswith(f"seal_{short_hash}_")]
     return matches[-1] if matches else None
 
 
-def git_porcelain() -> list[str]:
-    # Status format: XY <path> (or "?? <path>" for untracked)
+def porcelain() -> list[str]:
     out = sh(["git", "status", "--porcelain"])
-    return [line.rstrip("\n") for line in out.splitlines() if line.strip()]
+    return [ln for ln in out.splitlines() if ln.strip()]
 
 
-def assert_relaxed_dirty_is_only_untracked_sig(repo: Path) -> None:
+def sig_relaxed_ok(lines: list[str]) -> bool:
     """
-    Relaxed mode allows 'dirty' only if it is strictly:
-      - untracked files (??) AND
-      - path matches seals/*.sig
-    Anything else: hard fail.
+    Only allow untracked seals/*.sig. Anything else = fail.
+    Accepts: '?? seals/<name>.sig'
     """
-    lines = git_porcelain()
+    for ln in lines:
+        # Example: "?? seals/seal_xxx.json.sig"
+        if not (ln.startswith("?? ") and ln[3:].startswith("seals/") and ln.endswith(".sig")):
+            return False
+    return True
+
+
+def enforce_sig_policy(sig_policy: str) -> None:
+    lines = porcelain()
     if not lines:
         return
 
-    bad: list[str] = []
-    for line in lines:
-        # Untracked: "?? path"
-        if not line.startswith("?? "):
-            bad.append(line)
-            continue
-        path = line[3:].strip()
-        p = (repo / path).resolve()
-        # Must be seals/*.sig
-        if "/seals/" not in p.as_posix() and "\\seals\\" not in str(p):
-            bad.append(line)
-            continue
-        if not path.replace("\\", "/").startswith("seals/") or not path.endswith(".sig"):
-            bad.append(line)
-            continue
+    if sig_policy == "strict":
+        raise SystemExit("✖ sig-strict refused: working tree is dirty\n" + "\n".join(lines))
 
-    if bad:
-        msg = "\n".join(bad)
-        raise SystemExit(
-            "✖ sig-relaxed refused: working tree has changes beyond untracked seals/*.sig\n"
-            f"{msg}"
-        )
+    # relaxed
+    if not sig_relaxed_ok(lines):
+        raise SystemExit("✖ sig-relaxed refused: working tree has changes beyond untracked seals/*.sig\n" + "\n".join(lines))
 
 
-def verify_one(seal_path: Path, verify_sig: bool, pubkey: Path, allow_dirty_to_verify_seal: bool) -> None:
-    if not seal_path.exists():
-        raise SystemExit(f"✖ Seal file missing: {seal_path}")
+def verify_one(seal: Path, verify_sig: bool, pubkey: Path, allow_dirty_to_verify_seal: bool) -> None:
+    if not seal.exists():
+        raise SystemExit(f"✖ Seal missing: {seal}")
 
-    # 1) Content verification
-    cmd = [sys.executable, "-m", "scripts.verify_seal", str(seal_path)]
+    cmd = [sys.executable, "-m", "scripts.verify_seal", str(seal)]
     if allow_dirty_to_verify_seal:
         cmd.append("--allow-dirty")
 
     rc = run(cmd)
     if rc != 0:
-        raise SystemExit(f"✖ verify_seal failed for {seal_path.name}")
+        raise SystemExit(f"✖ verify_seal failed for {seal.name}")
 
-    # 2) Signature verification
     if verify_sig:
-        if not pubkey.exists():
-            raise SystemExit(f"✖ Public key missing: {pubkey}")
-        rc = run([sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path), "--pub", str(pubkey)])
-        if rc != 0:
-            raise SystemExit(f"✖ verify_seal_signature failed for {seal_path.name}")
+        sig_path = seal.with_suffix(seal.suffix + ".sig")
+        if not sig_path.exists():
+            raise SystemExit("ERROR: signature file missing")
 
-    print(f"✔ OK: {seal_path.name}")
+        rc = run([sys.executable, "-m", "scripts.verify_seal_signature", str(seal), "--pub", str(pubkey)])
+        if rc != 0:
+            raise SystemExit(f"✖ verify_seal_signature failed for {seal.name}")
+
+    print(f"✔ OK: {seal.name}")
 
 
 def main() -> int:
@@ -106,55 +99,49 @@ def main() -> int:
     ap.add_argument("--head", action="store_true", help="verify latest seal for HEAD")
     ap.add_argument("--last", type=int, default=0, help="verify last N seals (chronological)")
     ap.add_argument("--no-sig", action="store_true", help="skip signature verification (content only)")
-    ap.add_argument("--pub", type=Path, default=DEFAULT_PUBKEY, help="Ed25519 public key (PEM) used for signature verification")
+    ap.add_argument("--pub", type=Path, default=DEFAULT_PUBKEY, help="Ed25519 public key (PEM) for signature verification")
 
-    sig_mode = ap.add_mutually_exclusive_group()
-    sig_mode.add_argument("--sig-strict", action="store_true", help="require signature; refuse dirty tree (default behavior)")
-    sig_mode.add_argument("--sig-relaxed", action="store_true", help="require signature; allow ONLY untracked seals/*.sig dirt")
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--sig-strict", action="store_true", help="require signature; refuse ANY dirty tree")
+    g.add_argument("--sig-relaxed", action="store_true", help="require signature; allow ONLY untracked seals/*.sig dirt")
 
+    ap.add_argument("--allow-dirty-to-verify-seal", action="store_true", help="pass --allow-dirty to scripts.verify_seal")
     args = ap.parse_args()
 
     root = repo_root()
-    seals_dir = root / "seals"
-    seals = list_seals(seals_dir)
+    sd = seals_dir(root)
+    seals = list_seals(sd)
     if not seals:
-        raise SystemExit(f"✖ No seals found in {seals_dir}")
+        raise SystemExit(f"✖ No seals found in {sd}")
 
-    # Determine signature behavior
+    pubkey = args.pub if args.pub.is_absolute() else (root / args.pub)
+
+    # Determine whether we are verifying signatures
     if args.no_sig:
         verify_sig = False
+        sig_policy = "none"
     else:
         verify_sig = True
+        sig_policy = "strict" if args.sig_strict else ("relaxed" if args.sig_relaxed else "strict")
 
-    # If user didn't specify sig mode explicitly:
-    # - if verify_sig == True, default to strict (safer)
-    # - if verify_sig == False, doesn't matter
-    sig_strict = args.sig_strict or (verify_sig and not args.sig_relaxed)
-    sig_relaxed = args.sig_relaxed
+    # If signatures are required, enforce policy BEFORE verification
+    if verify_sig:
+        enforce_sig_policy(sig_policy)
 
-    pubkey = (root / args.pub) if not args.pub.is_absolute() else args.pub
-
-    # In sig-relaxed: enforce that dirt is ONLY untracked seals/*.sig
-    # and pass --allow-dirty to verify_seal so the content check can proceed.
-    allow_dirty_to_verify_seal = False
-    if sig_relaxed:
-        assert_relaxed_dirty_is_only_untracked_sig(root)
-        allow_dirty_to_verify_seal = True
-
-    # Default: verify HEAD
-    if args.head or (not args.head and args.last == 0):
+    # Default: HEAD
+    if args.head or args.last == 0:
         hs = head_short_12()
-        p = find_latest_seal_for_short_hash(seals, hs)
-        if not p:
+        seal = latest_seal_for_short_hash(seals, hs)
+        if not seal:
             raise SystemExit(f"✖ No seal found for HEAD short hash (12): {hs}")
-        print(f"→ Verifying HEAD seal: {p}")
-        verify_one(p, verify_sig=verify_sig, pubkey=pubkey, allow_dirty_to_verify_seal=allow_dirty_to_verify_seal)
+        print(f"→ Verifying HEAD seal: {seal}")
+        verify_one(seal, verify_sig=verify_sig, pubkey=pubkey, allow_dirty_to_verify_seal=args.allow_dirty_to_verify_seal)
 
     if args.last > 0:
-        batch = seals[-args.last:]
+        batch = seals[-args.last :]
         print(f"→ Verifying last {len(batch)} seal(s)")
-        for p in batch:
-            verify_one(p, verify_sig=verify_sig, pubkey=pubkey, allow_dirty_to_verify_seal=allow_dirty_to_verify_seal)
+        for s in batch:
+            verify_one(s, verify_sig=verify_sig, pubkey=pubkey, allow_dirty_to_verify_seal=args.allow_dirty_to_verify_seal)
 
     print("✅ Seal verification complete.")
     return 0
