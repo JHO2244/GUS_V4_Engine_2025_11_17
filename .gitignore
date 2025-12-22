@@ -57,3 +57,11 @@ pas_phase2_sample_seal.json
 
 # repo seal snapshots
 seals/*.json
+
+# --- Guardian Generated Artifacts ---
+
+# Linguistic Guard — Shadow Semantic Ledger (generated, non-blocking)
+linguistic/logs/
+
+# Seal signatures (local by default to avoid infinite seal loops)
+seals/*.sig

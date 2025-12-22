@@ -30,6 +30,11 @@ TXT
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
+
+# 🧠 Linguistic Guard (non-blocking): generates SSL ledger tied to this epoch lock
+python -m layer0_uam_v4.linguistic.linguistic_guard || true
+
+
 PRIV="${GUS_SEAL_PRIV:-}"
 PUB="${GUS_SEAL_PUB:-keys/gus_seal_signing_ed25519_pub.pem}"
 COMMIT_SIG=0

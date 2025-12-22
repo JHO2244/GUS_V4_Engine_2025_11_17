@@ -1,0 +1,117 @@
+{
+  "glc_version": "1.1",
+  "status": "SEALED_CANONICAL",
+  "rules": {
+    "canon_supremacy": true,
+    "canonical_defaulting": true,
+    "canonical_override_precedence": true,
+    "shadow_semantic_ledger": true
+  },
+  "terms": [
+    {
+      "term_id": "GLC-INT-001",
+      "term": "Integrity",
+      "root": "Latin integer — whole, undivided",
+      "guardian_definition": "Structural wholeness across logic, ethics, and execution, such that no internal contradiction exists between intent, design, and outcome.",
+      "allowed_range": ["systems architecture", "governance", "verification", "process design"],
+      "forbidden_usage": ["moral signaling", "virtue claims", "character judgment", "emotional leverage"],
+      "notes": "Integrity is structural, not performative."
+    },
+    {
+      "term_id": "GLC-TRU-002",
+      "term": "Truth",
+      "root": "Old English trēowþ — faithfulness, reliability",
+      "guardian_definition": "That which remains consistent under verification, repetition, and cross-context testing.",
+      "allowed_range": ["measurement", "validation", "audit", "factual grounding"],
+      "forbidden_usage": ["personal belief", "ideological assertion", "emotional certainty"]
+    },
+    {
+      "term_id": "GLC-COH-003",
+      "term": "Coherence",
+      "root": "Latin cohaerēre — to stick together",
+      "guardian_definition": "The degree to which components align without contradiction across levels and time.",
+      "allowed_range": ["systems", "reasoning chains", "architectures"],
+      "forbidden_usage": ["vibes", "feelings", "narrative smoothness without structure"]
+    },
+    {
+      "term_id": "GLC-SYS-004",
+      "term": "System",
+      "root": "Greek systēma — organized whole",
+      "guardian_definition": "A bounded set of interacting components governed by rules, constraints, and feedback.",
+      "allowed_range": ["technical", "organizational", "governance contexts"],
+      "forbidden_usage": ["vague collectives", "metaphors without boundaries"]
+    },
+    {
+      "term_id": "GLC-RES-005",
+      "term": "Rating",
+      "root": "Latin ratus — fixed, settled",
+      "guardian_definition": "A quantified evaluation derived from defined criteria, not opinion.",
+      "allowed_range": ["assessment", "benchmarking", "decision gates"],
+      "forbidden_usage": ["praise", "approval", "social validation"]
+    },
+    {
+      "term_id": "GLC-LAN-006",
+      "term": "Language",
+      "root": "Latin lingua — tongue",
+      "guardian_definition": "A symbolic interface for encoding, transmitting, and preserving meaning across agents and time.",
+      "allowed_range": ["communication", "specification", "documentation"],
+      "forbidden_usage": ["identity signaling", "persuasion without structure"]
+    },
+    {
+      "term_id": "GLC-VAL-007",
+      "term": "Value",
+      "root": "Latin valēre — to be strong, effective",
+      "guardian_definition": "Measurable contribution that improves system performance, integrity, or longevity.",
+      "allowed_range": ["performance", "impact", "system improvement"],
+      "forbidden_usage": ["moral worth", "subjective preference"]
+    },
+    {
+      "term_id": "GLC-AUT-008",
+      "term": "Authority",
+      "root": "Latin auctor — originator, one who brings forth",
+      "guardian_definition": "Legitimacy derived from responsibility, authorship, and accountability.",
+      "allowed_range": ["governance", "roles", "accountability"],
+      "forbidden_usage": ["power over others", "dominance"]
+    },
+    {
+      "term_id": "GLC-SEC-009",
+      "term": "Security",
+      "root": "Latin sēcūrus — without care (safe from disturbance)",
+      "guardian_definition": "Resistance to unauthorized change, access, or degradation.",
+      "allowed_range": ["tamper resistance", "access control", "integrity protection"],
+      "forbidden_usage": ["fear-based control", "secrecy theater"]
+    },
+    {
+      "term_id": "GLC-VER-010",
+      "term": "Verification",
+      "root": "Latin vērus — true",
+      "guardian_definition": "Independent confirmation through repeatable checks.",
+      "allowed_range": ["tests", "audits", "reproducible validation"],
+      "forbidden_usage": ["trust without evidence"]
+    },
+    {
+      "term_id": "GLC-ALN-011",
+      "term": "Alignment",
+      "root": "Old French alignier — to bring into line",
+      "guardian_definition": "Consistency between intent, structure, and outcome.",
+      "allowed_range": ["design intent", "architecture", "outcome checks"],
+      "forbidden_usage": ["ideological agreement", "conformity"]
+    },
+    {
+      "term_id": "GLC-STA-012",
+      "term": "Stability",
+      "root": "Latin stabilis — standing firm",
+      "guardian_definition": "Capacity to remain functional under stress or time.",
+      "allowed_range": ["stress", "longevity", "resilience"],
+      "forbidden_usage": ["rigidity", "stagnation"]
+    },
+    {
+      "term_id": "GLC-INTF-013",
+      "term": "Interface",
+      "root": "Latin inter + facies — between faces",
+      "guardian_definition": "Defined boundary through which systems interact.",
+      "allowed_range": ["APIs", "contracts", "protocol boundaries"],
+      "forbidden_usage": ["ambiguous overlap"]
+    }
+  ]
+}

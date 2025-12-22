@@ -55,4 +55,7 @@ else
   python -m scripts.verify_repo_seals --head --no-sig
 fi
 
+# 🧠 Linguistic Guard (non-blocking)
+python -m layer0_uam_v4.linguistic.linguistic_guard || true
+
 echo "✅ normal gate passed."
