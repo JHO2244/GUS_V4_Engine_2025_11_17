@@ -160,19 +160,23 @@ def main() -> int:
         print("OK: working tree clean.")
 
     # Verify HEAD seal in the most practical safe mode available.
-    # We use --sig-relaxed because strict modes refuse any dirt (including allowed untracked seals/*.sig).
-    # NOTE: It is acceptable for the HEAD seal to be unsigned; we report it explicitly.
-    rc, out = run(["python", "-m", "scripts.verify_repo_seals", "--head", "--sig-relaxed"])
-    print(out.rstrip())
+    # In CI verify-only mode, seals may be intentionally absent (ignored/untracked).
+    seals_dir = REPO_ROOT / "seals"
+    has_any_seal_json = seals_dir.is_dir() and any(seals_dir.glob("seal_*.json"))
 
-    if rc != 0:
-        # If the only failure is "signature file missing", treat as NOTE (unsigned HEAD) not as failure.
-        lowered = out.lower()
-        if "signature file missing" in lowered:
-            print("NOTE: HEAD seal is valid but unsigned (signature file missing).")
-        else:
-            print("FAIL: HEAD seal verification failed under sig-relaxed.")
-            return 6
+    if os.getenv("GUS_CI") == "1" and not has_any_seal_json:
+        print("[WARN] No seals present in CI verify-only mode — skipping HEAD seal verification.")
+    else:
+        rc, out = run(["python", "-m", "scripts.verify_repo_seals", "--head", "--sig-relaxed"])
+        print(out.rstrip())
+
+        if rc != 0:
+            lowered = out.lower()
+            if "signature file missing" in lowered:
+                print("NOTE: HEAD seal is valid but unsigned (signature file missing).")
+            else:
+                print("FAIL: HEAD seal verification failed under sig-relaxed.")
+                return 6
 
     # Optional: check epoch signature file existence (not required if untracked policy is in place)
     if seal_sig_rel:
