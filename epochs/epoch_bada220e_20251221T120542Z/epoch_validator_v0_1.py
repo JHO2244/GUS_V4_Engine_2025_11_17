@@ -190,7 +190,7 @@ def main() -> int:
                 print("FAIL: manifest says seal_sig_tracked=true but signature is missing.")
                 return 7
 
-    print("✅ Epoch Validator PASS (read-only).")
+    print("OK: Epoch Validator PASS (read-only).")
     return 0
 
 
