@@ -10,6 +10,12 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import os
+
+# CI safety rail: attestation is verify-only; do not generate new seal artifacts in CI.
+if os.environ.get("GUS_CI", "").strip() == "1":
+    raise SystemExit("CI mode (GUS_CI=1): seal snapshot generation disabled (verify-only policy).")
+
 OUT_DIR = Path("seals")
 LOCK_FILE = Path("requirements.lock.txt")
 
