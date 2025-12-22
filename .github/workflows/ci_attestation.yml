@@ -1,31 +1,33 @@
 name: GUS v4 — CI Attestation (Verify-Only)
 
 on:
-  push:
-    branches: ["main"]
   pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
 
 jobs:
   attestation:
+    name: attestation
     runs-on: windows-latest
-
     env:
       GUS_CI: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONDONTWRITEBYTECODE: "1"
 
     steps:
-      - name: Checkout
+      - name: Checkout (full history for epoch anchors)
         uses: actions/checkout@v4
         with:
-          fetch-depth:0
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
 
-      - name: Create venv + install dependencies
+      - name: Create venv + install deps
         shell: bash
         run: |
           python -m venv venv
@@ -39,7 +41,7 @@ jobs:
           source venv/Scripts/activate
           pytest
 
-      - name: Attestation — HEAD seal content verification
+      - name: Attestation — HEAD seal content verification (verify-only)
         shell: bash
         run: |
           if [ -d "seals" ] && ls -1 seals/seal_*.json >/dev/null 2>&1; then
@@ -56,9 +58,3 @@ jobs:
           source venv/Scripts/activate
           python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py
 
-      - name: Attestation — Signature status (warning-only)
-        shell: bash
-        continue-on-error: true
-        run: |
-          source venv/Scripts/activate
-          python -m scripts.verify_repo_seals --head --sig-relaxed
