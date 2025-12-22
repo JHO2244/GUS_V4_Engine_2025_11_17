@@ -37,3 +37,23 @@ PAS v0.2 Status:
 - Tests intentionally skipped when layer5_continuity is not importable
 - Current mode: OBSERVATIONAL (non-blocking)
 - Enforcement deferred by design
+
+## CI Parity & Interpreter Rules (GUS v4)
+
+GUS integrity tooling must be executed in a deterministic Python context.
+
+### Canonical invocation style
+- Always use module execution:
+  - `python -m scripts.verify_repo_seals ...`
+  - `python -m compileall .`
+  - `pytest`
+
+### Interpreter determinism
+- CI must run using the project virtual environment (or an equivalent isolated environment).
+- Do not rely on a system Python with implicit PATH resolution.
+- When running Python from tooling, prefer `sys.executable` where applicable to ensure the same interpreter context.
+
+### Seal generation in CI
+- CI is **verify-only** by default:
+  - CI must not generate new seal JSON files as part of attestation.
+  - CI must not sign seals (private keys remain offline).
