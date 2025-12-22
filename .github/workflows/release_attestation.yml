@@ -1,0 +1,45 @@
+name: GUS v4 — Release Attestation (Tags Only)
+
+on:
+  push:
+    tags:
+      - "v*.*"
+      - "v*.*.*"
+
+jobs:
+  release_attestation:
+    runs-on: windows-latest
+    env:
+      GUS_CI: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Create venv + install deps
+        shell: bash
+        run: |
+          python -m venv venv
+          source venv/Scripts/activate
+          python -m pip install --upgrade pip
+          python -m pip install pytest cryptography
+
+      - name: Tests (release gate)
+        shell: bash
+        run: |
+          source venv/Scripts/activate
+          pytest
+
+      - name: Seal verification (signature required for releases)
+        shell: bash
+        run: |
+          source venv/Scripts/activate
+          # For releases, we require signature presence/validity.
+          python -m scripts.verify_repo_seals --head --sig-strict
