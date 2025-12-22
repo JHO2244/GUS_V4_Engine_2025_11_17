@@ -1,0 +1,95 @@
+{
+  "gus_version": "v4",
+  "artifact_type": "ci_attestation_contract",
+  "artifact_version": "0.1",
+  "status": "DRAFT",
+  "date_utc": "2025-12-22",
+  "intent": "Define what CI is allowed to assert (attest) for GUS v4, under verify-only policy and offline signing posture.",
+  "principles": {
+    "integrity": "CI must never weaken verification semantics or silently ignore failures.",
+    "security": "No private keys in CI. No signing in CI. Secrets must not be required for core verification.",
+    "privacy": "No telemetry assumptions; CI should not leak repository contents beyond normal build logs.",
+    "efficiency": "Attestation should be fast and deterministic.",
+    "practicality": "Unsigned HEAD seals are acceptable unless policy explicitly requires signing for a given tag/epoch."
+  },
+  "ci_policy": {
+    "mode": "verify-only",
+    "no_signing": true,
+    "offline_keys_required": false,
+    "seal_generation": {
+      "allowed": false,
+      "enforcement": {
+        "env_var": "GUS_CI",
+        "required_value": "1",
+        "note": "When GUS_CI=1, seal snapshot generation is disabled."
+      }
+    },
+    "python_invocation": {
+      "required_style": "python -m",
+      "isolated_env_required": true,
+      "notes": [
+        "CI must run in a venv (or equivalent isolated environment).",
+        "Avoid system Python ambiguity; tooling should prefer sys.executable internally."
+      ]
+    }
+  },
+  "attestation_scope": {
+    "must_pass": [
+      {
+        "id": "CI-GATE-01",
+        "name": "Unit test suite",
+        "command": "pytest",
+        "pass_criteria": "Exit code 0"
+      },
+      {
+        "id": "CI-GATE-02",
+        "name": "HEAD seal content verification",
+        "command": "python -m scripts.verify_repo_seals --head --no-sig",
+        "pass_criteria": "Exit code 0"
+      },
+      {
+        "id": "CI-GATE-03",
+        "name": "Epoch validator (anchor epoch)",
+        "command": "python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py",
+        "pass_criteria": "Exit code 0"
+      }
+    ],
+    "may_warn": [
+      {
+        "id": "CI-WARN-01",
+        "name": "Unsigned HEAD seal",
+        "trigger": "python -m scripts.verify_repo_seals --head --sig-relaxed reports signature missing",
+        "interpretation": "Allowed under offline-signing posture; CI reports as warning (not failure)."
+      }
+    ],
+    "must_fail": [
+      {
+        "id": "CI-FAIL-01",
+        "name": "Seal verification fails",
+        "trigger": "verify_repo_seals returns non-zero in --no-sig mode",
+        "interpretation": "Integrity break: CI must fail."
+      },
+      {
+        "id": "CI-FAIL-02",
+        "name": "Disallowed repo dirt for epoch validation",
+        "trigger": "epoch_validator reports disallowed changes beyond allowed patterns",
+        "interpretation": "Process break: CI must fail."
+      }
+    ]
+  },
+  "environment_requirements": {
+    "python": ">=3.14",
+    "dependencies": [
+      "pytest",
+      "cryptography"
+    ],
+    "notes": [
+      "cryptography is required for Ed25519 signature verification when signatures are present.",
+      "CI does not require signing keys."
+    ]
+  },
+  "future_extensions": [
+    "Optional signed-release gating (tags only): require signatures for specific release tags/epochs.",
+    "Provenance attestation (SBOM) once dependency lock strategy is finalized."
+  ]
+}
