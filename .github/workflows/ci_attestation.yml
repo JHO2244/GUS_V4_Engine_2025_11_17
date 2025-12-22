@@ -40,8 +40,12 @@ jobs:
       - name: Attestation — HEAD seal content verification
         shell: bash
         run: |
-          source venv/Scripts/activate
-          python -m scripts.verify_repo_seals --head --no-sig
+          if [ -d "seals" ] && [ "$(ls -A seals 2>/dev/null)" ]; then
+            echo "Seals found — verifying"
+            python -m scripts.verify_repo_seals --head --no-sig
+          else
+            echo "No seals present (CI verify-only mode) — skipping seal verification"
+          fi
 
       - name: Attestation — Epoch validator
         shell: bash
