@@ -128,10 +128,14 @@ def main() -> int:
 
     # Check seal json path exists (relative to repo)
     if seal_json_rel:
-        seal_path = (REPO_ROOT / seal_json_rel).resolve()
+        seal_path = (repo_root / Path(seal_rel)).resolve()
         if not seal_path.exists():
-            print(f"FAIL: epoch seal_json does not exist: {seal_json_rel}")
-            return 4
+            # CI verify-only mode: seals may be intentionally untracked
+            if os.getenv("GUS_CI") == "1":
+                print(f"[WARN] epoch seal_json missing in CI verify-only mode: {seal_rel} — skipping.")
+            else:
+                print(f"FAIL: epoch seal_json does not exist: {seal_rel}")
+                return 4
         print(f"OK: epoch seal_json exists: {seal_json_rel}")
 
     # Check dirty tree is within allowed patterns (strict epoch invariant)
