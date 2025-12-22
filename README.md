@@ -59,3 +59,4 @@ GUS integrity tooling must be executed in a deterministic Python context.
 - CI is **verify-only** by default:
   - CI must not generate new seal JSON files as part of attestation.
   - CI must not sign seals (private keys remain offline).
+
