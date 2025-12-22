@@ -1,5 +1,7 @@
 #2025-12-10 – GUS v4 Engine ALL_GREEN snapshot
 
+[![GUS v4 — CI Attestation](https://github.com/JHO2244/GUS_V4_Engine_2025_11_17/actions/workflows/ci_attestation.yml/badge.svg?branch=main)](https://github.com/JHO2244/GUS_V4_Engine_2025_11_17/actions/workflows/ci_attestation.yml)
+
 Commit: 3205b5e3972d8b4393d3a5d779675f67affedb78
 
 Backup: Z:\GuardianBackups\GUS_V4\GUS_V4_Engine_2025_11_17_ALL_GREEN_20251210.zip
