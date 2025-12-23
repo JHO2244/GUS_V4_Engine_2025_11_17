@@ -74,6 +74,11 @@ def run(cmd: list[str]) -> tuple[int, str]:
     )
     return p.returncode, p.stdout
 
+def any_seal_json_present() -> bool:
+    seals_dir = REPO_ROOT / "seals"
+    if not seals_dir.is_dir():
+        return False
+    return any(seals_dir.glob("seal_*.json"))
 
 def git_head() -> str:
     rc, out = run(["git", "rev-parse", "HEAD"])
@@ -186,20 +191,22 @@ def main() -> int:
     else:
         print("OK: working tree clean.")
 
-    # Verify HEAD seal in the most practical safe mode available.
-    # We use --sig-relaxed because strict modes refuse any dirt (including allowed untracked seals/*.sig).
-    # NOTE: It is acceptable for the HEAD seal to be unsigned; we report it explicitly.
-    rc, out = run(["python", "-m", "scripts.verify_repo_seals", "--head", "--sig-relaxed"])
-    print(out.rstrip())
+    # HEAD seal verification policy:
+    # - Local: required (should exist)
+    # - CI verify-only: skip if seals are absent (CI doesn't generate seals)
+    if is_ci() and not any_seal_json_present():
+        print("[WARN] No seals present in CI verify-only mode — skipping HEAD seal verification.")
+    else:
+        rc, out = run(["python", "-m", "scripts.verify_repo_seals", "--head", "--sig-relaxed"])
+        print(out.rstrip())
 
-    if rc != 0:
-        # If the only failure is "signature file missing", treat as NOTE (unsigned HEAD) not as failure.
-        lowered = out.lower()
-        if "signature file missing" in lowered:
-            print("NOTE: HEAD seal is valid but unsigned (signature file missing).")
-        else:
-            print("FAIL: HEAD seal verification failed under sig-relaxed.")
-            return 6
+        if rc != 0:
+            lowered = out.lower()
+            if "signature file missing" in lowered:
+                print("NOTE: HEAD seal is valid but unsigned (signature file missing).")
+            else:
+                print("FAIL: HEAD seal verification failed under sig-relaxed.")
+                return 6
 
     # Optional: check epoch signature file existence (not required if untracked policy is in place)
     if seal_sig_rel:
