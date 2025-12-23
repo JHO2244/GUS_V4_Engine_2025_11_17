@@ -25,14 +25,22 @@ from typing import Iterable
 import sys
 
 def is_ci() -> bool:
-    print(f"DEBUG is_ci() => {is_ci()}")
+    gus_ci = os.getenv("GUS_CI", "")
+    ci = os.getenv("CI", "")
+    gha = os.getenv("GITHUB_ACTIONS", "")
 
-    # GitHub Actions sets CI=true and GITHUB_ACTIONS=true by default.
-    return (
-        os.getenv("GUS_CI") == "1"
-        or os.getenv("CI", "").lower() == "true"
-        or os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+    truthy = {"1", "true", "yes", "on", "y"}
+
+    result = (
+        gus_ci.strip().lower() in truthy
+        or ci.strip().lower() in truthy
+        or gha.strip().lower() in truthy
     )
+
+    # DEBUG without recursion
+    print(f"CI flags: GUS_CI={gus_ci} CI={ci} GITHUB_ACTIONS={gha}")
+    return result
+
 
 # Force UTF-8 stdout/stderr on Windows CI (prevents cp1252 charmap crashes)
 try:
