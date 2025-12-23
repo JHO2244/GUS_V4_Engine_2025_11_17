@@ -120,7 +120,7 @@ def main() -> int:
     sig_relaxed = vmods.get("sig_relaxed", {})
     allowed_dirty_patterns = sig_relaxed.get("allowed_dirty_paths", ["seals/*.sig"])
 
-    print("🛡 Epoch Validator v0.1")
+    print("[EPOCH] Epoch Validator v0.1")
     print(f"Repo root: {REPO_ROOT}")
     print(f"Manifest:  {MANIFEST_PATH}")
     print(f"Anchor commit (epoch.head_commit): {anchor_commit}")
