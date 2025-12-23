@@ -25,6 +25,8 @@ from typing import Iterable
 import sys
 
 def is_ci() -> bool:
+    print(f"DEBUG is_ci() => {is_ci()}")
+
     # GitHub Actions sets CI=true and GITHUB_ACTIONS=true by default.
     return (
         os.getenv("GUS_CI") == "1"
@@ -128,6 +130,7 @@ def main() -> int:
     sig_relaxed = vmods.get("sig_relaxed", {})
     allowed_dirty_patterns = sig_relaxed.get("allowed_dirty_paths", ["seals/*.sig"])
 
+    print(f"CI flags: GUS_CI={os.getenv('GUS_CI')} CI={os.getenv('CI')} GITHUB_ACTIONS={os.getenv('GITHUB_ACTIONS')}")
     print("[EPOCH] Epoch Validator v0.1")
     print(f"Repo root: {REPO_ROOT}")
     print(f"Manifest:  {MANIFEST_PATH}")
