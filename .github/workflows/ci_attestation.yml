@@ -1,5 +1,9 @@
 name: GUS v4 — CI Attestation (Verify-Only)
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     branches: [ "main" ]
