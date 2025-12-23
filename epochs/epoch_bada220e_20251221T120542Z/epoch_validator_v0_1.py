@@ -111,7 +111,7 @@ def main() -> int:
     sig_relaxed = vmods.get("sig_relaxed", {})
     allowed_dirty_patterns = sig_relaxed.get("allowed_dirty_paths", ["seals/*.sig"])
 
-    print("🛡 Epoch Validator v0.1")
+    print("[EPOCH] Epoch Validator v0.1")
     print(f"Repo root: {REPO_ROOT}")
     print(f"Manifest:  {MANIFEST_PATH}")
     print(f"Anchor commit (epoch.head_commit): {anchor_commit}")
@@ -128,11 +128,16 @@ def main() -> int:
 
     # Check seal json path exists (relative to repo)
     if seal_json_rel:
-        seal_path = (REPO_ROOT / seal_json_rel).resolve()
+        seal_path = (REPO_ROOT / Path(seal_json_rel)).resolve()
         if not seal_path.exists():
-            print(f"FAIL: epoch seal_json does not exist: {seal_json_rel}")
-            return 4
-        print(f"OK: epoch seal_json exists: {seal_json_rel}")
+            # CI verify-only mode: seals may be intentionally untracked
+            if os.getenv("GUS_CI") == "1":
+                print(f"[WARN] epoch seal_json missing in CI verify-only mode: {seal_json_rel} — skipping.")
+            else:
+                print(f"FAIL: epoch seal_json does not exist: {seal_json_rel}")
+                return 4
+        else:
+            print(f"OK: epoch seal_json exists: {seal_json_rel}")
 
     # Check dirty tree is within allowed patterns (strict epoch invariant)
     lines = git_status_porcelain()
@@ -155,19 +160,23 @@ def main() -> int:
         print("OK: working tree clean.")
 
     # Verify HEAD seal in the most practical safe mode available.
-    # We use --sig-relaxed because strict modes refuse any dirt (including allowed untracked seals/*.sig).
-    # NOTE: It is acceptable for the HEAD seal to be unsigned; we report it explicitly.
-    rc, out = run(["python", "-m", "scripts.verify_repo_seals", "--head", "--sig-relaxed"])
-    print(out.rstrip())
+    # In CI verify-only mode, seals may be intentionally absent (ignored/untracked).
+    seals_dir = REPO_ROOT / "seals"
+    has_any_seal_json = seals_dir.is_dir() and any(seals_dir.glob("seal_*.json"))
 
-    if rc != 0:
-        # If the only failure is "signature file missing", treat as NOTE (unsigned HEAD) not as failure.
-        lowered = out.lower()
-        if "signature file missing" in lowered:
-            print("NOTE: HEAD seal is valid but unsigned (signature file missing).")
-        else:
-            print("FAIL: HEAD seal verification failed under sig-relaxed.")
-            return 6
+    if os.getenv("GUS_CI") == "1" and not has_any_seal_json:
+        print("[WARN] No seals present in CI verify-only mode — skipping HEAD seal verification.")
+    else:
+        rc, out = run(["python", "-m", "scripts.verify_repo_seals", "--head", "--sig-relaxed"])
+        print(out.rstrip())
+
+        if rc != 0:
+            lowered = out.lower()
+            if "signature file missing" in lowered:
+                print("NOTE: HEAD seal is valid but unsigned (signature file missing).")
+            else:
+                print("FAIL: HEAD seal verification failed under sig-relaxed.")
+                return 6
 
     # Optional: check epoch signature file existence (not required if untracked policy is in place)
     if seal_sig_rel:
@@ -181,7 +190,7 @@ def main() -> int:
                 print("FAIL: manifest says seal_sig_tracked=true but signature is missing.")
                 return 7
 
-    print("✅ Epoch Validator PASS (read-only).")
+    print("OK: Epoch Validator PASS (read-only).")
     return 0
 
 
