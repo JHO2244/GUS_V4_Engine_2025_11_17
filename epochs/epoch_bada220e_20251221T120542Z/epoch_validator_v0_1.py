@@ -24,6 +24,14 @@ from typing import Iterable
 
 import sys
 
+def is_ci() -> bool:
+    # GitHub Actions sets CI=true and GITHUB_ACTIONS=true by default.
+    return (
+        os.getenv("GUS_CI") == "1"
+        or os.getenv("CI", "").lower() == "true"
+        or os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+    )
+
 # Force UTF-8 stdout/stderr on Windows CI (prevents cp1252 charmap crashes)
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -139,8 +147,7 @@ def main() -> int:
     if seal_json_rel:
         seal_path = (REPO_ROOT / seal_json_rel).resolve()
         if not seal_path.exists():
-            # CI verify-only mode: seals/*.json are intentionally untracked/absent
-            if os.getenv("GUS_CI") == "1":
+            if is_ci():
                 print(f"[WARN] epoch seal_json missing in CI verify-only mode: {seal_json_rel} — skipping.")
             else:
                 print(f"FAIL: epoch seal_json does not exist: {seal_json_rel}")
