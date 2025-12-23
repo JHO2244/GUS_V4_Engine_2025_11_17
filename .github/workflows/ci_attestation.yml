@@ -58,7 +58,3 @@ jobs:
           source venv/Scripts/activate
           python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py
 
-      - name: Epoch Validator
-        env:
-          GUS_CI: "1"
-        run: python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py
