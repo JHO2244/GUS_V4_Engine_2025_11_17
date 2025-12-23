@@ -22,6 +22,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Diagnostics — show checked out commit + validator snippet
+        shell: bash
+        run: |
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          git rev-parse HEAD
+          git log -1 --oneline
+          echo "---- validator banner lines ----"
+          python -c "from pathlib import Path; p=Path('epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py'); print('\n'.join(p.read_text(encoding='utf-8', errors='replace').splitlines()[0:140]))"
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -58,3 +67,4 @@ jobs:
           source venv/Scripts/activate
           python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py
 
+     
