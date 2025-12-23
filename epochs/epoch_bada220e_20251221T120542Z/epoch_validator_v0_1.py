@@ -22,6 +22,15 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+import sys
+
+# Force UTF-8 stdout/stderr on Windows CI (prevents cp1252 charmap crashes)
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 PYTHON = sys.executable
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
