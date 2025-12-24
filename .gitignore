@@ -58,8 +58,12 @@ pas_phase2_sample_seal.json
 # repo seal snapshots
 # --- Guardian Seal Rules ---
 # Allow tracking of seal JSON files (audit trail)
+seals/*.json
+!seals/seal_bada220e099d_20251221T120542Z.json
+!seals/seal_a93b0e2f5a53_20251224T095555Z.json
 !seals/
 !seals/seal_*.json
+
 
 # Keep signatures untracked (prevents infinite loops)
 seals/*.sig
