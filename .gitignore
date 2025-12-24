@@ -56,7 +56,14 @@ pas_phase2_sample_seal.json
 .pytest_tmp/
 
 # repo seal snapshots
-seals/*.json
+# --- Guardian Seal Rules ---
+# Allow tracking of seal JSON files (audit trail)
+!seals/
+!seals/seal_*.json
+
+# Keep signatures untracked (prevents infinite loops)
+seals/*.sig
+
 
 # --- Guardian Generated Artifacts ---
 
