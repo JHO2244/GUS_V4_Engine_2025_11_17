@@ -19,6 +19,12 @@ def mini_repo(tmp_path: Path) -> Path:
     _git(repo, "init")
     _git(repo, "config", "user.email", "test@example.com")
     _git(repo, "config", "user.name", "Test User")
+    _git(repo, "config", "commit.gpgsign", "false")
+    _git(repo, "config", "tag.gpgsign", "false")
+
+    # If your global config uses SSH signing, this helps hard-stop it inside the mini repo:
+    _git(repo, "config", "gpg.format", "openpgp")
+    _git(repo, "config", "gpg.program", "true")
 
     (repo / "requirements.lock").write_text("pkgA==1.0.0\n", encoding="utf-8")
     (repo / "hello.txt").write_text("hello\n", encoding="utf-8")
