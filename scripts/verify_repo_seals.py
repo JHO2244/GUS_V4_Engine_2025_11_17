@@ -68,11 +68,13 @@ def verify_one(
 
     # 1) Content verification
     cmd = [sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path), "--pub", str(pubkey)]
-    # In sig-relaxed mode, tolerate missing .sig as NOTE (not ERROR).
+
+    # If we're in sig-relaxed mode, allow missing .sig to be NOTE (not ERROR)
     if allow_dirty_to_verify_seal:
         cmd.append("--allow-missing-sig")
 
     rc = run(cmd)
+
     if rc != 0:
         raise SystemExit(f"✖ verify_seal_signature failed for {seal_path.name}")
 
