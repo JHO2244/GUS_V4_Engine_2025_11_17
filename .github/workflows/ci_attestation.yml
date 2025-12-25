@@ -55,16 +55,9 @@ jobs:
           source venv/Scripts/activate
           pytest
 
-      - name: Attestation — HEAD seal content verification (verify-only)
-        shell: bash
+      - name: Verify latest tracked seal (content-only)
         run: |
-          if [ -d "seals" ] && ls -1 seals/seal_*.json >/dev/null 2>&1; then
-            echo "Seals found — verifying HEAD seal (no-sig)"
-            source venv/Scripts/activate
-            python -m scripts.verify_repo_seals --head --no-sig
-          else
-            echo "No seals present (CI verify-only mode) — skipping seal verification."
-          fi
+          python -m scripts.verify_latest_seal
 
       - name: Attestation — Epoch validator
         shell: bash

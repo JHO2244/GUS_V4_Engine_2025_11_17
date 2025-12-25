@@ -1,35 +1,3 @@
-* text=auto eol=lf
-*.ps1 text eol=crlf
-
-# GUS v4 — Line endings & diff stability
-# Goal: cross-platform deterministic diffs; silence CRLF/LF warnings.
-
-# Default: treat all files as text; normalize to LF in repo
-* text=auto eol=lf
-
-# Windows scripts: keep CRLF if you ever add .cmd/.bat files
-*.bat text eol=crlf
-*.cmd text eol=crlf
-
-# Shell scripts should always be LF
-*.sh text eol=lf
-
-# Python, configs, docs: LF
-*.py  text eol=lf
-*.json text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
-*.toml text eol=lf
-*.md  text eol=lf
-*.txt text eol=lf
-
-# Binary safety (don’t try to normalize)
-*.png binary
-*.jpg binary
-*.jpeg binary
-*.gif binary
-*.pdf binary
-*.zip binary
-*.exe binary
-*.dll binary
-*.pyd binary
+# GUS audit artifacts must be byte-exact (no CRLF/LF normalization)
+seals/*.json -text
+seals/*.sig  -text

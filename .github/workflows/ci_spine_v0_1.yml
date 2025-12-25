@@ -1,0 +1,70 @@
+name: GUS CI Spine v0.1 (Guardian)
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "test/ci-register" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gus-ci-spine-v0-1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gus-ci-spine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: "1"
+
+    steps:
+      # ✅ PR runs: checkout the PR *head commit* (not the merge commit)
+      - name: Checkout (PR head)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      # ✅ Push runs: checkout normal SHA
+      - name: Checkout (push)
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install deps (CI)
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest cryptography
+          pip install -r requirements.txt || true
+          pip install -r requirements-dev.txt || true
+
+      - name: Unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pytest -q
+
+      - name: Verify latest tracked seal (content-only)
+        run: |
+          python -m scripts.verify_latest_seal
+
+      - name: Verify epoch anchor (CI-safe)
+        run: |
+          python -m scripts.verify_epoch_anchor --manifest epochs/epoch_bada220e_20251221T120542Z/epoch_manifest_v0_1.json
+
+      - name: Epoch validator (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py

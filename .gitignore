@@ -55,13 +55,21 @@ pas_phase2_sample_seal.json
 # pytest temp
 .pytest_tmp/
 
-# repo seal snapshots
+# --- Guardian Seal Rules (clean) ---
+
+# Ignore generated seals by default (prevents seal spam)
 seals/*.json
+seals/*.sig
+
+# Allow tracking ONLY specific audit/epoch seals (explicit allow-list)
+!seals/seal_bada220e099d_20251221T120542Z.json
+!seals/seal_bada220e099d_20251221T120542Z.json.sig
+
+# (Optional) If you intentionally want this specific audit seal tracked:
+!seals/seal_a93b0e2f5a53_20251224T095555Z.json
 
 # --- Guardian Generated Artifacts ---
 
 # Linguistic Guard — Shadow Semantic Ledger (generated, non-blocking)
 linguistic/logs/
 
-# Seal signatures (local by default to avoid infinite seal loops)
-seals/*.sig

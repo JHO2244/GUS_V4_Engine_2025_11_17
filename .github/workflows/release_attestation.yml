@@ -37,9 +37,7 @@ jobs:
           source venv/Scripts/activate
           pytest
 
-      - name: Seal verification (signature required for releases)
-        shell: bash
+      - name: Verify epoch anchor (signed) for release
         run: |
-          source venv/Scripts/activate
-          # For releases, we require signature presence/validity.
-          python -m scripts.verify_repo_seals --head --sig-strict
+          python -m scripts.verify_epoch_anchor --manifest epochs/epoch_bada220e_20251221T120542Z/epoch_manifest_v0_1.json
+      
