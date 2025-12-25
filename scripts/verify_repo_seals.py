@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from utils.console_symbols import sym
+
 import argparse
 import subprocess
 import sys
@@ -64,7 +66,7 @@ def verify_one(
     allow_dirty_to_verify_seal: bool,
 ) -> None:
     if not seal_path.exists():
-        raise SystemExit(f"✖ Seal file missing: {seal_path}")
+        raise SystemExit(f"{sym('fail')} Seal file missing: {seal_path}")
 
     # 1) Content verification
     cmd = [sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path), "--pub", str(pubkey)]
@@ -76,12 +78,12 @@ def verify_one(
     rc = run(cmd)
 
     if rc != 0:
-        raise SystemExit(f"✖ verify_seal_signature failed for {seal_path.name}")
+        raise SystemExit(f"{sym('fail')} verify_seal_signature failed for {seal_path.name}")
 
     # 2) Signature verification (requires .sig adjacent)
     if verify_sig:
         if not pubkey.exists():
-            raise SystemExit(f"✖ Public key missing: {pubkey}")
+            raise SystemExit(f"{sym('fail')} Public key missing: {pubkey}")
         cmd = [sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path), "--pub", str(pubkey)]
 
         # If caller selected sig-relaxed, allow missing .sig to be NOTE-only (non-fatal)
@@ -91,9 +93,9 @@ def verify_one(
         rc = run(cmd)
 
         if rc != 0:
-            raise SystemExit(f"✖ verify_seal_signature failed for {seal_path.name}")
+            raise SystemExit(f"{sym('fail')} verify_seal_signature failed for {seal_path.name}")
 
-    print(f"✔ OK: {seal_path.name}")
+    print(f"{sym('check')} OK: {seal_path.name}")
 
 
 def main() -> int:
@@ -113,7 +115,7 @@ def main() -> int:
     seals_dir = root / "seals"
     seals = list_seals(seals_dir)
     if not seals:
-        raise SystemExit(f"✖ No seals found in {seals_dir}")
+        raise SystemExit(f"{sym('fail')} No seals found in {seals_dir}")
 
     porcelain = git_porcelain()
 
@@ -128,11 +130,11 @@ def main() -> int:
         sig_strict = args.sig_strict or (not args.sig_strict and not args.sig_relaxed)
         if sig_strict:
             if porcelain:
-                raise SystemExit("✖ sig-strict refused: working tree is dirty")
+                raise SystemExit(f"{sym('fail')} sig-strict refused: working tree is dirty")
         else:
             # sig-relaxed
             if not only_untracked_sig_dirt(porcelain):
-                msg = ["✖ sig-relaxed refused: working tree has changes beyond untracked seals/*.sig"]
+                msg = [f"{sym('fail')} sig-relaxed refused: working tree has changes beyond untracked seals/*.sig"]
                 msg.extend(porcelain)
                 raise SystemExit("\n".join(msg))
             # allow content verification to proceed even though tree is dirty due to untracked .sig
@@ -147,17 +149,17 @@ def main() -> int:
         hs = head_short_12()
         p = find_latest_seal_for_short_hash(seals, hs)
         if not p:
-            raise SystemExit(f"✖ No seal found for HEAD short hash (12): {hs}")
-        print(f"→ Verifying HEAD seal: {p}")
+            raise SystemExit(f"{sym('fail')} No seal found for HEAD short hash (12): {hs}")
+        print(f"{sym('arrow')} Verifying HEAD seal: {p}")
         verify_one(p, verify_sig=verify_sig, pubkey=pubkey, allow_dirty_to_verify_seal=allow_dirty_to_verify_seal)
 
     if args.last > 0:
         batch = seals[-args.last:]
-        print(f"→ Verifying last {len(batch)} seal(s)")
+        print(f"{sym('arrow')} Verifying last {len(batch)} seal(s)")
         for p in batch:
             verify_one(p, verify_sig=verify_sig, pubkey=pubkey, allow_dirty_to_verify_seal=allow_dirty_to_verify_seal)
 
-    print("✅ Seal verification complete.")
+    print(f"{sym('check')} Seal verification complete.")
     return 0
 
 

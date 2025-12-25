@@ -19,6 +19,7 @@ jobs:
       GUS_CI: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONDONTWRITEBYTECODE: "1"
+      GUS_ASCII: "1"
 
     steps:
       - name: Checkout (full history for epoch anchors)

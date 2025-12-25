@@ -6,7 +6,7 @@ cd "$REPO_ROOT"
 
 # --- recursion guard (SINGLE, authoritative) ---
 if [[ "${GUS_GUARDIAN_GATE_RUNNING:-0}" == "1" ]]; then
-  echo "✖ BLOCKED: Guardian Gate recursion detected."
+  echo "ERROR: BLOCKED: Guardian Gate recursion detected."
   exit 1
 fi
 export GUS_GUARDIAN_GATE_RUNNING=1
@@ -42,7 +42,7 @@ check_working_tree_cleanliness
 
 if [[ "${MODE}" == "pre-commit" ]]; then
   # FAST gate: no heavy calls, no signatures, no seal verification
-  echo "✅ pre-commit gate passed."
+  echo "OK: pre-commit gate passed."
   exit 0
 fi
 
@@ -58,4 +58,4 @@ fi
 # 🧠 Linguistic Guard (non-blocking)
 python -m layer0_uam_v4.linguistic.linguistic_guard || true
 
-echo "✅ normal gate passed."
+echo "OK: normal gate passed."
