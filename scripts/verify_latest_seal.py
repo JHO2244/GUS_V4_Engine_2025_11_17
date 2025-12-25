@@ -28,7 +28,7 @@ def main() -> int:
         print(f"✖ verify_seal failed for {latest.name}")
         return rc
 
-    print(f"✔ OK: {latest.name}")
+    print(f"[OK] {latest.name}")
     return 0
 
 
