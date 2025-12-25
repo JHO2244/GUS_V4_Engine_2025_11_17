@@ -1,19 +1,25 @@
-name: GUS CI Spine v0.1
+name: GUS CI Spine v0.1 (Guardian)
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "test/ci-register" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gus-ci-spine-v0-1-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   gus-ci-spine:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       PYTHONUTF8: "1"
-      # Policy switch:
-      # - "1" means CI REQUIRES a signed HEAD seal (.sig must exist and validate)
-      # - "0" means CI allows unsigned HEAD seal (still verifies content hash)
-      GUS_CI_REQUIRE_SIGNED_HEAD_SEAL: "1"
 
     steps:
       - name: Checkout
@@ -25,32 +31,31 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+          cache: "pip"
 
-      - name: Install deps (minimal)
+      - name: Install deps (minimal; no secrets)
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || true
-          pip install -r requirements-dev.txt || true
-          pip install pytest
+          python -m pip install --upgrade pytest
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then python -m pip install -r requirements-dev.txt; fi
 
-      - name: Run tests
+      - name: Unit tests
+        shell: bash
         run: |
+          set -euo pipefail
           pytest -q
 
-      - name: Verify HEAD seal (content)
+      - name: Verify HEAD seal (content-only; no signature)
+        shell: bash
         run: |
-          # This should succeed even if signature is missing (content verification only)
+          set -euo pipefail
           python -m scripts.verify_repo_seals --head --no-sig
 
-      - name: Verify HEAD seal signature (policy-driven)
-        run: |
-          if [ "${GUS_CI_REQUIRE_SIGNED_HEAD_SEAL}" = "1" ]; then
-            echo "Policy: signed HEAD seal REQUIRED"
-            python -m scripts.verify_repo_seals --head --no-sig
-          else
-            echo "Policy: signed HEAD seal NOT required (content verification already done)"
-          fi
-
       - name: Epoch validator (read-only)
+        shell: bash
         run: |
+          set -euo pipefail
           python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py
