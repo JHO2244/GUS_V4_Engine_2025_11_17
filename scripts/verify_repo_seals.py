@@ -85,7 +85,7 @@ def verify_one(
         cmd = [sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path), "--pub", str(pubkey)]
 
         # If caller selected sig-relaxed, allow missing .sig to be NOTE-only (non-fatal)
-        if args.sig_relaxed:
+        if allow_dirty_to_verify_seal:
             cmd.append("--allow-missing-sig")
 
         rc = run(cmd)
