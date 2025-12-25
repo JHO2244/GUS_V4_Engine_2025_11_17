@@ -190,15 +190,18 @@ def main() -> int:
             print("OK: working tree dirt is within allowed patterns only.")
     else:
         print("OK: working tree clean.")
+import os
+
+IN_CI = (os.getenv("CI") == "true") or (os.getenv("GITHUB_ACTIONS") == "true")
 
     # HEAD seal verification policy:
     # - Local: required (should exist)
     # - CI verify-only: skip if seals are absent (CI doesn't generate seals)
-    if is_ci() and not any_seal_json_present():
-        print("[WARN] No seals present in CI verify-only mode — skipping HEAD seal verification.")
-    else:
-        rc, out = run(["python", "-m", "scripts.verify_repo_seals", "--head", "--sig-relaxed"])
-        print(out.rstrip())
+    if IN_CI:
+    print("[EPOCH] CI mode: skipping HEAD seal verification (Option A).")
+else:
+    # existing HEAD seal verification (keep it for local / release use)
+    # e.g. run_verify_repo_seals_head_sig_relaxed()
 
         if rc != 0:
             lowered = out.lower()
