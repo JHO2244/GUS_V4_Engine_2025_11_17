@@ -55,11 +55,9 @@ jobs:
           set -euo pipefail
           pytest -q
 
-      - name: Verify HEAD seal (content-only; no signature)
-        shell: bash
+      - name: Verify latest tracked seal (content-only)
         run: |
-          set -euo pipefail
-          python -m scripts.verify_repo_seals --head --no-sig
+          python -m scripts.verify_latest_seal
 
       - name: Epoch validator (read-only)
         shell: bash
