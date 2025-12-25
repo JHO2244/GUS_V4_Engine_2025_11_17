@@ -60,3 +60,6 @@ GUS integrity tooling must be executed in a deterministic Python context.
   - CI must not generate new seal JSON files as part of attestation.
   - CI must not sign seals (private keys remain offline).
 
+Epoch anchors are history.
+HEAD seals are proof-of-now.
+Proof-of-now never pollutes history.

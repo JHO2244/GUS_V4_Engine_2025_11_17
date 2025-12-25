@@ -8,7 +8,7 @@
 set -euo pipefail
 
 RED=$'\033[31m'; GRN=$'\033[32m'; RST=$'\033[0m'
-die() { echo "${RED}✖ PRE-COMMIT BLOCKED:${RST} $*" 1>&2; exit 1; }
+die() { echo "${RED}ERROR: PRE-COMMIT BLOCKED:${RST} $*" 1>&2; exit 1; }
 
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || die "Not inside a git repository."
 cd "$repo_root"
@@ -18,7 +18,7 @@ echo "Repo: $repo_root"
 
 # Prefer bash gate if it exists
 if [[ -f "scripts/guardian_gate.sh" ]]; then
-  echo "→ Running: bash scripts/guardian_gate.sh"
+  echo "-> Running: bash scripts/guardian_gate.sh"
   bash scripts/guardian_gate.sh || die "Guardian Gate failed."
   echo "${GRN}✓ Guardian Gate passed${RST}"
   exit 0

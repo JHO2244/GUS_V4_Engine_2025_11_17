@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-die() { echo "✖ $*" >&2; exit 1; }
+die() { echo "ERROR: $*" >&2; exit 1; }
 
 usage() {
   cat <<'TXT'
@@ -65,9 +65,10 @@ SHORT="$(git rev-parse --short=12 HEAD)"
 SEAL="$(ls -1 "$SEALS_DIR"/seal_"$SHORT"_*.json 2>/dev/null | sort | tail -n 1 || true)"
 [[ -n "$SEAL" ]] || die "No seal found for HEAD short hash: $SHORT"
 
-echo "🧷 Repo:  $REPO_ROOT"
-echo "🧷 HEAD:  $(git rev-parse HEAD)"
-echo "🧷 Seal:  $SEAL"
+echo "PIN: Repo:  $REPO_ROOT"
+echo "PIN: HEAD:  $(git rev-parse HEAD)"
+echo "PIN: Seal:  $SEAL"
+
 
 if [[ -z "$SEAL" ]]; then
   echo "ℹ No HEAD seal found; generating one now..."
@@ -85,17 +86,18 @@ SIG="${SEAL}.sig"
 # Verify signature immediately (direct verifier)
 ./venv/Scripts/python scripts/verify_seal_signature.py "$SEAL" --pub "$PUB"
 
-echo "✅ Epoch seal signed + verified."
+echo "OK: Epoch seal signed + verified."
 
 if [[ "$COMMIT_SIG" == "1" ]]; then
-  echo "⚠ You enabled --commit-sig"
-  echo "⚠ Committing the .sig will create a NEW HEAD (and therefore a NEW seal)."
-  echo "⚠ That new seal will NOT be signed unless you run LOCK_EPOCH again."
+  echo "WARN: You enabled --commit-sig"
+  echo "WARN: Committing the .sig will create a NEW HEAD (and therefore a NEW seal)."
+  echo "WARN: That new seal will NOT be signed unless you run LOCK_EPOCH again."
+
 
   git add "$SIG"
   git commit -m "chore: add signature for $(basename "$SEAL") (epoch lock)"
   git push origin main
-  echo "✅ .sig committed. New HEAD seal has been created (unsigned by default)."
+  echo "OK: .sig committed. New HEAD seal has been created (unsigned by default)."
 else
   echo "ℹ .sig NOT committed (default). This avoids infinite seal loops."
 fi

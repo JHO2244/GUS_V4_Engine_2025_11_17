@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from utils.console_symbols import sym
 
 
 def main() -> int:
@@ -10,7 +11,7 @@ def main() -> int:
     seals = sorted(seals_dir.glob("seal_*_*.json"))
 
     if not seals:
-        print(f"✖ No seals found in {seals_dir}")
+        print(f"{sym('fail')} No seals found in {seals_dir}")
         return 1
 
     latest = seals[-1]
@@ -25,7 +26,7 @@ def main() -> int:
     ).returncode
 
     if rc != 0:
-        print(f"✖ verify_seal failed for {latest.name}")
+        print(f"{sym('fail')} verify_seal failed for {latest.name}")
         return rc
 
     print(f"[OK] {latest.name}")

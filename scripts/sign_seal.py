@@ -6,7 +6,7 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
-
+from utils.console_symbols import sym
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -27,7 +27,7 @@ def main() -> None:
     sig_path = args.seal.with_suffix(args.seal.suffix + ".sig")
     sig_path.write_bytes(sig)
 
-    print(f"OK: signed {args.seal.name} → {sig_path.name}")
+    print(f"OK: signed {args.seal.name} {sym('arrow')} {sig_path.name}")
 
 
 if __name__ == "__main__":
