@@ -76,9 +76,13 @@ linguistic/logs/
 # Seal signatures (local by default to avoid infinite seal loops)
 seals/*.sig
 
-# Ignore generated seals by default
+# Seal outputs: ignore by default
 seals/*.json
 seals/*.sig
+
+# But allow explicitly tracked epoch/audit seals when we choose to commit them
+!seals/seal_*_*.json
+!seals/seal_*_*.json.sig
 
 # But keep the intentionally-tracked audit seals
 !seals/seal_a93b0e2f5a53_20251224T095555Z.json
