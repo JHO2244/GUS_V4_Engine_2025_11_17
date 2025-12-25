@@ -59,6 +59,10 @@ jobs:
         run: |
           python -m scripts.verify_latest_seal
 
+      - name: Verify epoch anchor (CI-safe)
+        run: |
+          python -m scripts.verify_epoch_anchor --manifest epochs/epoch_bada220e_20251221T120542Z/epoch_manifest_v0_1.json
+
       - name: Epoch validator (read-only)
         shell: bash
         run: |
