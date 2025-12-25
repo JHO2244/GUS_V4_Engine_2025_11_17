@@ -22,7 +22,17 @@ jobs:
       PYTHONUTF8: "1"
 
     steps:
-      - name: Checkout
+      # ✅ PR runs: checkout the PR *head commit* (not the merge commit)
+      - name: Checkout (PR head)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      # ✅ Push runs: checkout normal SHA
+      - name: Checkout (push)
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -31,16 +41,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-          cache: "pip"
 
-      - name: Install deps (minimal; no secrets)
+      - name: Install pytest only (no dependency cache assumptions)
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install --upgrade pytest
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then python -m pip install -r requirements-dev.txt; fi
 
       - name: Unit tests
         shell: bash
