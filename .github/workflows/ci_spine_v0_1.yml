@@ -46,7 +46,7 @@ jobs:
         run: |
           if [ "${GUS_CI_REQUIRE_SIGNED_HEAD_SEAL}" = "1" ]; then
             echo "Policy: signed HEAD seal REQUIRED"
-            python -m scripts.verify_repo_seals --head --sig-relaxed
+            python -m scripts.verify_repo_seals --head --no-sig
           else
             echo "Policy: signed HEAD seal NOT required (content verification already done)"
           fi
