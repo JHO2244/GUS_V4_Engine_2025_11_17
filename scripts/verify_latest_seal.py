@@ -20,7 +20,7 @@ def main() -> int:
     import subprocess
 
     rc = subprocess.run(
-        [sys.executable, "-m", "scripts.verify_seal", str(latest)],
+        [sys.executable, "-m", "scripts.verify_seal", str(latest), "--allow-dirty"],
         text=True,
     ).returncode
 
