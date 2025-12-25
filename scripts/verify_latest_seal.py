@@ -14,7 +14,7 @@ def main() -> int:
         return 1
 
     latest = seals[-1]
-    print(f"→ Verifying latest seal (content-only): {latest}")
+    print(f"[VERIFY] Latest seal (content-only): {latest}")
 
     # Use existing verifier for content-only
     import subprocess
