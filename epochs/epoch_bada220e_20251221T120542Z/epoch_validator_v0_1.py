@@ -5,8 +5,9 @@ GUS v4 — Epoch Validator v0.1 (read-only)
 Validates the epoch manifest against:
 - Git HEAD & expected anchor
 - Allowed "dirty tree" rules
-- Seal verification (content-only)
-- Optional signature expectations (only if present)
+- Epoch seal JSON existence
+- Optional epoch signature expectations
+- (Option A) CI skips HEAD seal verification entirely
 
 Run:
   python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py
@@ -22,7 +23,6 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
-import sys
 
 def is_ci() -> bool:
     gus_ci = os.getenv("GUS_CI", "")
@@ -37,20 +37,20 @@ def is_ci() -> bool:
         or gha.strip().lower() in truthy
     )
 
-    # DEBUG without recursion
+    # Keep this print ASCII-safe for Windows runners
     print(f"CI flags: GUS_CI={gus_ci} CI={ci} GITHUB_ACTIONS={gha}")
     return result
 
 
-# Force UTF-8 stdout/stderr on Windows CI (prevents cp1252 charmap crashes)
+# Force UTF-8 stdout/stderr where supported (prevents Windows cp1252 crashes)
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 except Exception:
     pass
 
-PYTHON = sys.executable
 
+PYTHON = sys.executable
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = Path(__file__).with_name("epoch_manifest_v0_1.json")
 
@@ -74,11 +74,13 @@ def run(cmd: list[str]) -> tuple[int, str]:
     )
     return p.returncode, p.stdout
 
+
 def any_seal_json_present() -> bool:
     seals_dir = REPO_ROOT / "seals"
     if not seals_dir.is_dir():
         return False
     return any(seals_dir.glob("seal_*.json"))
+
 
 def git_head() -> str:
     rc, out = run(["git", "rev-parse", "HEAD"])
@@ -91,8 +93,7 @@ def git_status_porcelain() -> list[str]:
     rc, out = run(["git", "status", "--porcelain"])
     if rc != 0:
         raise RuntimeError(f"git status failed:\n{out}")
-    lines = [ln.strip() for ln in out.splitlines() if ln.strip()]
-    return lines
+    return [ln.strip() for ln in out.splitlines() if ln.strip()]
 
 
 def porcelain_paths(lines: Iterable[str]) -> list[str]:
@@ -101,16 +102,13 @@ def porcelain_paths(lines: Iterable[str]) -> list[str]:
     """
     paths: list[str] = []
     for ln in lines:
-        # Untracked
         if ln.startswith("?? "):
             paths.append(ln[3:].strip())
         else:
-            # e.g. ' M file', 'A  file', 'R  old -> new'
             parts = ln.split()
             if not parts:
                 continue
             if "->" in parts:
-                # rename: last token is new path
                 paths.append(parts[-1].strip())
             else:
                 paths.append(parts[-1].strip())
@@ -118,9 +116,23 @@ def porcelain_paths(lines: Iterable[str]) -> list[str]:
 
 
 def is_allowed_dirty(path: str, allowed_patterns: list[str]) -> bool:
-    # Normalize to forward slashes for pattern matching
     p = path.replace("\\", "/")
     return any(fnmatch.fnmatch(p, pat) for pat in allowed_patterns)
+
+
+def verify_head_seal_sig_relaxed() -> int:
+    """
+    Local-only HEAD seal verification.
+    Option A: CI skips this entirely.
+    Uses sig-relaxed because head seals are allowed to be unsigned.
+    """
+    rc, out = run(["python", "-m", "scripts.verify_repo_seals", "--head", "--sig-relaxed"])
+    if rc != 0:
+        print(out.strip())
+        return rc
+    # Print tool output to keep logs consistent
+    print(out.strip())
+    return 0
 
 
 def main() -> int:
@@ -130,7 +142,6 @@ def main() -> int:
 
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     epoch = manifest.get("epoch", {})
-    invariants = manifest.get("invariants", [])
     policy = manifest.get("policy", {})
     vmods = policy.get("verification_modes", {})
 
@@ -139,11 +150,9 @@ def main() -> int:
     seal_sig_rel = epoch.get("seal_sig", "")
     seal_sig_tracked = bool(epoch.get("seal_sig_tracked", False))
 
-    # Allowed dirt patterns (from sig_relaxed mode)
     sig_relaxed = vmods.get("sig_relaxed", {})
     allowed_dirty_patterns = sig_relaxed.get("allowed_dirty_paths", ["seals/*.sig"])
 
-    print(f"CI flags: GUS_CI={os.getenv('GUS_CI')} CI={os.getenv('CI')} GITHUB_ACTIONS={os.getenv('GITHUB_ACTIONS')}")
     print("[EPOCH] Epoch Validator v0.1")
     print(f"Repo root: {REPO_ROOT}")
     print(f"Manifest:  {MANIFEST_PATH}")
@@ -159,7 +168,7 @@ def main() -> int:
             print(f"FAIL: anchor commit is not a valid commit: {anchor_commit}")
             return 3
 
-    # Check seal json path exists (relative to repo)
+    # Check epoch seal JSON exists (relative to repo)
     if seal_json_rel:
         seal_path = (REPO_ROOT / seal_json_rel).resolve()
         if not seal_path.exists():
@@ -171,11 +180,10 @@ def main() -> int:
         else:
             print(f"OK: epoch seal_json exists: {seal_json_rel}")
 
-    # Check dirty tree is within allowed patterns (strict epoch invariant)
+    # Check dirty tree is within allowed patterns
     lines = git_status_porcelain()
     paths = porcelain_paths(lines)
     if paths:
-        # If there are changes, all must be allowed dirt (narrow exception)
         disallowed = [p for p in paths if not is_allowed_dirty(p, allowed_dirty_patterns)]
         if disallowed:
             print("FAIL: working tree contains disallowed changes beyond allowed dirty paths.")
@@ -186,38 +194,29 @@ def main() -> int:
             for pat in allowed_dirty_patterns:
                 print(f"  - {pat}")
             return 5
-        else:
-            print("OK: working tree dirt is within allowed patterns only.")
+        print("OK: working tree dirt is within allowed patterns only.")
     else:
         print("OK: working tree clean.")
-import os
 
-IN_CI = (os.getenv("CI") == "true") or (os.getenv("GITHUB_ACTIONS") == "true")
-
-    # HEAD seal verification policy:
-    # - Local: required (should exist)
-    # - CI verify-only: skip if seals are absent (CI doesn't generate seals)
-    if IN_CI:
-    print("[EPOCH] CI mode: skipping HEAD seal verification (Option A).")
-else:
-    # existing HEAD seal verification (keep it for local / release use)
-    # e.g. run_verify_repo_seals_head_sig_relaxed()
-
-        if rc != 0:
-            lowered = out.lower()
-            if "signature file missing" in lowered:
-                print("NOTE: HEAD seal is valid but unsigned (signature file missing).")
-            else:
+    # Option A: CI skips HEAD seal verification (CI doesn't generate head seals)
+    if is_ci():
+        print("[EPOCH] CI mode: skipping HEAD seal verification (Option A).")
+    else:
+        # Local mode: only attempt if seals exist at all
+        if any_seal_json_present():
+            rc = verify_head_seal_sig_relaxed()
+            if rc != 0:
                 print("FAIL: HEAD seal verification failed under sig-relaxed.")
                 return 6
+        else:
+            print("[WARN] No seals present locally — skipping HEAD seal verification.")
 
-    # Optional: check epoch signature file existence (not required if untracked policy is in place)
+    # Optional: epoch signature file existence (strict only if manifest says tracked)
     if seal_sig_rel:
         sig_path = (REPO_ROOT / seal_sig_rel).resolve()
         if sig_path.exists():
             print(f"OK: epoch seal signature file exists: {seal_sig_rel}")
         else:
-            # Not a failure by default because your policy keeps .sig untracked/uncommitted.
             print(f"NOTE: epoch seal signature file not present in repo: {seal_sig_rel}")
             if seal_sig_tracked:
                 print("FAIL: manifest says seal_sig_tracked=true but signature is missing.")
@@ -228,8 +227,4 @@ else:
 
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except Exception as e:
-        print(f"FAIL: exception: {e}")
-        raise
+    raise SystemExit(main())
