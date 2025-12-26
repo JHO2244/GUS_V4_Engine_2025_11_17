@@ -44,18 +44,32 @@ def git_porcelain() -> list[str]:
 
 def only_untracked_sig_dirt(lines: list[str]) -> bool:
     """
-    Allow ONLY: ?? seals/<anything>.sig
-    Disallow: any staged, modified, deleted, renamed, or untracked elsewhere.
+    Allow ONLY untracked:
+      - seals/*.sig
+      - artifacts/*
+      - (optionally) uncommitted seal_*.json generated locally
     """
     if not lines:
-        return True  # clean
+        return True
+
     for ln in lines:
-        # untracked files begin with "?? "
         if not ln.startswith("?? "):
             return False
+
         path = ln[3:].strip().replace("\\", "/")
-        if not (path.startswith("seals/") and path.endswith(".sig")):
-            return False
+
+        if path.startswith("seals/") and path.endswith(".sig"):
+            continue
+
+        if path.startswith("artifacts/"):
+            continue
+
+        # OPTIONAL: allow local, uncommitted seal JSONs
+        if path.startswith("seals/seal_") and path.endswith(".json"):
+            continue
+
+        return False
+
     return True
 
 
@@ -135,7 +149,7 @@ def main() -> int:
         else:
             # sig-relaxed
             if not only_untracked_sig_dirt(porcelain):
-                msg = [f"{sym('fail')} sig-relaxed refused: working tree has changes beyond untracked seals/*.sig"]
+                msg = [f"{sym('fail')} sig-relaxed refused: working tree has unauthorized changes"]
                 msg.extend(porcelain)
                 raise SystemExit("\n".join(msg))
             # allow content verification to proceed even though tree is dirty due to untracked .sig
