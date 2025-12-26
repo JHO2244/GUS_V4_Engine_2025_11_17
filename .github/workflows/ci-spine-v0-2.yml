@@ -13,34 +13,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # REQUIRED for tags & anchors
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Verify Anchor (no detach)
+      - name: Install minimal crypto dependency
+        run: |
+          python -m pip install --upgrade pip
+          pip install cryptography
+
+      - name: Verify Anchor (content-only seal presence for anchor SHA)
         run: |
           python -m scripts.verify_anchor
 
       - name: Extract Anchor SHA
         run: |
-          ANCHOR_TAG=$(git tag --list 'epoch_*_anchor_*' | sort | tail -n 1)
+          ANCHOR_TAG="$(git tag --list 'epoch_*_anchor_*' | sort | tail -n 1)"
           echo "ANCHOR_TAG=$ANCHOR_TAG" >> $GITHUB_ENV
           echo "ANCHOR_SHA=$(git rev-list -n 1 "$ANCHOR_TAG")" >> $GITHUB_ENV
 
-      - name: Verify Anchor Seal (STRICT)
+      - name: Verify Anchor Seal (content-only; strict cleanliness rules)
         run: |
           echo "Anchor tag: $ANCHOR_TAG"
           echo "Anchor sha: $ANCHOR_SHA"
           python -m scripts.verify_repo_seals --sha "$ANCHOR_SHA" --no-sig --sig-strict --ci
 
-      - name: Install deps (best effort)
+      - name: Run Tests
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt || true
-
-      - name: Run Tests
-        run: |
           pytest -q
