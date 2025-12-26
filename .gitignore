@@ -73,3 +73,9 @@ seals/*.sig
 # Linguistic Guard — Shadow Semantic Ledger (generated, non-blocking)
 linguistic/logs/
 
+# --- GUS seals ---
+seals/*.sig
+seals/*.json
+
+# Allow tracking of canonical epoch/head seals (explicit allow)
+!seals/seal_*.json
