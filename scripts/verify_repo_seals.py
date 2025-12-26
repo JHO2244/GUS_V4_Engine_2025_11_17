@@ -161,15 +161,23 @@ def main() -> int:
         # If you ever want a content-only relaxed mode, add a separate flag later.
         pass
 
-    # Default: verify HEAD
+    # Default: verify HEAD (or --sha if provided)
     if args.head or (not args.head and args.last == 0):
+        who = "SHA" if args.sha else "HEAD"
         target = args.sha if args.sha else "HEAD"
+
         hs = sh(["git", "rev-parse", "--short=12", target])
         p = find_latest_seal_for_short_hash(seals, hs)
         if not p:
-            raise SystemExit(f"{sym('fail')} No seal found for HEAD short hash (12): {hs}")
-        print(f"{sym('arrow')} Verifying HEAD seal: {p}")
-        verify_one(p, verify_sig=verify_sig, pubkey=pubkey, allow_dirty_to_verify_seal=allow_dirty_to_verify_seal)
+            raise SystemExit(f"{sym('fail')} No seal found for {who} short hash (12): {hs}")
+
+        print(f"{sym('arrow')} Verifying {who} seal: {p}")
+        verify_one(
+            p,
+            verify_sig=verify_sig,
+            pubkey=pubkey,
+            allow_dirty_to_verify_seal=allow_dirty_to_verify_seal,
+        )
 
     if args.last > 0:
         batch = seals[-args.last:]
