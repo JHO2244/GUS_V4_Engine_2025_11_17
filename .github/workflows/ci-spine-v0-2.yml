@@ -1,0 +1,50 @@
+name: GUS CI Spine v0.2
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # REQUIRED for tags & anchors
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify Anchor
+        run: |
+          python -m scripts.verify_anchor
+
+      - name: Clean workspace after verify_anchor
+        run: |
+          rm -rf artifacts/
+          git status --porcelain
+          git restore .
+          git clean -fd
+
+      - name: Extract Anchor Tag + SHA
+        run: |
+          ANCHOR_TAG="$(git tag --list 'epoch_*_anchor_*' | sort | tail -n 1)"
+          echo "ANCHOR_TAG=$ANCHOR_TAG" >> $GITHUB_ENV
+          echo "ANCHOR_SHA=$(git rev-list -n 1 "$ANCHOR_TAG")" >> $GITHUB_ENV
+
+      - name: Verify Anchor Seal (STRICT)
+        run: |
+          echo "Anchor tag: $ANCHOR_TAG"
+          echo "Anchor sha: $ANCHOR_SHA"
+          python -m scripts.verify_repo_seals --sha "$ANCHOR_SHA" --sig-strict --ci
+
+      - name: Run Tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pytest -q

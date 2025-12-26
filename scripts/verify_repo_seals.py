@@ -119,6 +119,8 @@ def main() -> int:
     ap.add_argument("--no-sig", action="store_true", help="skip signature verification (content only)")
     ap.add_argument("--pub", type=Path, default=DEFAULT_PUBKEY, help="Ed25519 public key (PEM) used for signature verification")
     ap.add_argument("--sha", default=None, help="Verify a specific commit SHA (or short SHA) instead of HEAD.")
+    ap.add_argument("--allow-artifacts", action="store_true", help="Allow untracked artifacts/ directory (LOCAL ONLY)")
+    ap.add_argument("--ci", action="store_true", help="CI mode: forbid uncommitted seal JSONs; allow only .sig as untracked dirt")
 
     pol = ap.add_mutually_exclusive_group()
     pol.add_argument("--sig-strict", action="store_true", help="require signature; refuse dirty tree (default for signed verification)")
