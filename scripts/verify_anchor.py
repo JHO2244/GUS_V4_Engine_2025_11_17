@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 """
-GUS v4 — Anchor Verify (CI Spine v0.2)
+GUS v4 - Anchor Verify (CI Spine v0.2)
 
 What this does (SAFE):
 - Finds latest epoch anchor tag (pattern: epoch_*_anchor_*)
 - Resolves tag -> anchor commit SHA
 - Verifies that a seal JSON exists for that anchor SHA in the CURRENT checkout
   (IMPORTANT: we DO NOT detach/checkout to the anchor commit)
-- Writes attestation JSON
+- Writes an attestation JSON
+
+Default behavior:
+- Writes attestation OUTSIDE the repo by default (system temp folder)
+- You can override with --out (e.g. --out artifacts/anchor_attestation.json)
 """
 
 import argparse
@@ -18,6 +22,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -60,16 +65,25 @@ def short12(sha: str) -> str:
     return sha[:12]
 
 
-def write_attestation(att: dict, out_path: Path) -> None:
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(att, indent=2), encoding="utf-8")
-    print(f"[OK] Wrote attestation: {out_path}")
+def default_attestation_path() -> Path:
+    # Always write OUTSIDE the repo by default.
+    # CI: RUNNER_TEMP; Local: system temp
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        base = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "gus_artifacts"
+    else:
+        base = Path(tempfile.gettempdir()) / "gus_artifacts"
+    return base / "anchor_attestation.json"
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag-pattern", default="epoch_*_anchor_*")
-    ap.add_argument("--out", default="artifacts/anchor_attestation.json")
+    ap.add_argument("--out", default=str(default_attestation_path()))
     args = ap.parse_args(argv)
 
     repo_root = Path(run_capture(["git", "rev-parse", "--show-toplevel"]))
@@ -85,10 +99,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     print(f"[OK] Latest anchor tag: {tag}")
     print(f"[OK] Anchor commit:     {anchor_sha12}")
 
-    # ✅ CRITICAL RULE: never detach/checkout here.
+    # CRITICAL RULE: never detach/checkout here.
     # Seal files for older commits are stored in newer history. Detaching would hide them.
 
-    # 1) Verify that the seal JSON exists for the anchor SHA (content-only ok here)
+    # Verify that the seal JSON exists for the anchor SHA (content-only is enough for CI,
+    # because .sig is not committed by design).
     cmd = [
         sys.executable, "-m", "scripts.verify_repo_seals",
         "--sha", anchor_sha12,
@@ -98,15 +113,6 @@ def main(argv: Optional[list[str]] = None) -> int:
     ]
     rc = subprocess.call(cmd)
     verified = (rc == 0)
-
-    # 2) Decide where to write the attestation
-    if os.environ.get("GITHUB_ACTIONS") == "true":
-        # Write outside repo in CI
-        out_dir = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "gus_artifacts"
-        out_path = out_dir / "anchor_attestation.json"
-    else:
-        # Local: write to requested path in repo (default artifacts/)
-        out_path = Path(args.out)
 
     att = {
         "utc": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
@@ -119,7 +125,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         "original_head_sha12": original_head12,
     }
 
-    write_attestation(att, out_path)
+    out_path = Path(args.out)
+    write_json(out_path, att)
+    print(f"[OK] Wrote attestation: {out_path}")
 
     return 0 if verified else 2
 
