@@ -85,8 +85,8 @@ def verify_one(
     # 1) Content verification
     cmd = [sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path), "--pub", str(pubkey)]
 
-    # If we're in sig-relaxed mode, allow missing .sig to be NOTE (not ERROR)
-    if allow_dirty_to_verify_seal:
+    # OK If we're NOT verifying signatures (--no-sig), then missing .sig must be allowed.
+    if (not verify_sig) or allow_dirty_to_verify_seal:
         cmd.append("--allow-missing-sig")
 
     rc = run(cmd)
