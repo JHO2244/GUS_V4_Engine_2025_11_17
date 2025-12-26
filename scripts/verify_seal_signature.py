@@ -22,7 +22,7 @@ def main() -> int:
     sig_path = args.seal.with_suffix(args.seal.suffix + ".sig")
     if not sig_path.exists():
         if args.allow_missing_sig:
-            print("NOTE: signature file missing (allowed in relaxed mode)")
+            print("NOTE: signature file missing (allowed by policy)")
             return 0
         raise SystemExit("ERROR: signature file missing")
 
