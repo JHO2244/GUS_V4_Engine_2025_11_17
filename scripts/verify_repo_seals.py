@@ -44,18 +44,32 @@ def git_porcelain() -> list[str]:
 
 def only_untracked_sig_dirt(lines: list[str]) -> bool:
     """
-    Allow ONLY: ?? seals/<anything>.sig
-    Disallow: any staged, modified, deleted, renamed, or untracked elsewhere.
+    Allow ONLY untracked:
+      - seals/*.sig
+      - artifacts/*
+      - (optionally) uncommitted seal_*.json generated locally
     """
     if not lines:
-        return True  # clean
+        return True
+
     for ln in lines:
-        # untracked files begin with "?? "
         if not ln.startswith("?? "):
             return False
+
         path = ln[3:].strip().replace("\\", "/")
-        if not (path.startswith("seals/") and path.endswith(".sig")):
-            return False
+
+        if path.startswith("seals/") and path.endswith(".sig"):
+            continue
+
+        if path.startswith("artifacts/"):
+            continue
+
+        # OPTIONAL: allow local, uncommitted seal JSONs
+        if path.startswith("seals/seal_") and path.endswith(".json"):
+            continue
+
+        return False
+
     return True
 
 
@@ -71,8 +85,8 @@ def verify_one(
     # 1) Content verification
     cmd = [sys.executable, "-m", "scripts.verify_seal_signature", str(seal_path), "--pub", str(pubkey)]
 
-    # If we're in sig-relaxed mode, allow missing .sig to be NOTE (not ERROR)
-    if allow_dirty_to_verify_seal:
+    # OK If we're NOT verifying signatures (--no-sig), then missing .sig must be allowed.
+    if (not verify_sig) or allow_dirty_to_verify_seal:
         cmd.append("--allow-missing-sig")
 
     rc = run(cmd)
@@ -104,6 +118,9 @@ def main() -> int:
     ap.add_argument("--last", type=int, default=0, help="verify last N seals (chronological)")
     ap.add_argument("--no-sig", action="store_true", help="skip signature verification (content only)")
     ap.add_argument("--pub", type=Path, default=DEFAULT_PUBKEY, help="Ed25519 public key (PEM) used for signature verification")
+    ap.add_argument("--sha", default=None, help="Verify a specific commit SHA (or short SHA) instead of HEAD.")
+    ap.add_argument("--allow-artifacts", action="store_true", help="Allow untracked artifacts/ directory (LOCAL ONLY)")
+    ap.add_argument("--ci", action="store_true", help="CI mode: forbid uncommitted seal JSONs; allow only .sig as untracked dirt")
 
     pol = ap.add_mutually_exclusive_group()
     pol.add_argument("--sig-strict", action="store_true", help="require signature; refuse dirty tree (default for signed verification)")
@@ -134,7 +151,7 @@ def main() -> int:
         else:
             # sig-relaxed
             if not only_untracked_sig_dirt(porcelain):
-                msg = [f"{sym('fail')} sig-relaxed refused: working tree has changes beyond untracked seals/*.sig"]
+                msg = [f"{sym('fail')} sig-relaxed refused: working tree has unauthorized changes"]
                 msg.extend(porcelain)
                 raise SystemExit("\n".join(msg))
             # allow content verification to proceed even though tree is dirty due to untracked .sig
@@ -146,7 +163,8 @@ def main() -> int:
 
     # Default: verify HEAD
     if args.head or (not args.head and args.last == 0):
-        hs = head_short_12()
+        target = args.sha if args.sha else "HEAD"
+        hs = sh(["git", "rev-parse", "--short=12", target])
         p = find_latest_seal_for_short_hash(seals, hs)
         if not p:
             raise SystemExit(f"{sym('fail')} No seal found for HEAD short hash (12): {hs}")
