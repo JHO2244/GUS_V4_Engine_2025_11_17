@@ -104,6 +104,7 @@ def main() -> int:
     ap.add_argument("--last", type=int, default=0, help="verify last N seals (chronological)")
     ap.add_argument("--no-sig", action="store_true", help="skip signature verification (content only)")
     ap.add_argument("--pub", type=Path, default=DEFAULT_PUBKEY, help="Ed25519 public key (PEM) used for signature verification")
+    ap.add_argument("--sha", default=None, help="Verify a specific commit SHA (or short SHA) instead of HEAD.")
 
     pol = ap.add_mutually_exclusive_group()
     pol.add_argument("--sig-strict", action="store_true", help="require signature; refuse dirty tree (default for signed verification)")
@@ -146,7 +147,8 @@ def main() -> int:
 
     # Default: verify HEAD
     if args.head or (not args.head and args.last == 0):
-        hs = head_short_12()
+        target = args.sha if args.sha else "HEAD"
+        hs = sh(["git", "rev-parse", "--short=12", target])
         p = find_latest_seal_for_short_hash(seals, hs)
         if not p:
             raise SystemExit(f"{sym('fail')} No seal found for HEAD short hash (12): {hs}")
