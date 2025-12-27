@@ -59,3 +59,14 @@ fi
 python -m layer0_uam_v4.linguistic.linguistic_guard || true
 
 echo "OK: normal gate passed."
+
+# 🚫 Block accidental deletion of committed seal JSONs
+# Allow override only if user explicitly sets: GUS_ALLOW_SEAL_DELETIONS=1
+if [[ "${GUS_ALLOW_SEAL_DELETIONS:-0}" != "1" ]]; then
+  if git diff --cached --name-status | awk '$1=="D" {print $2}' | grep -q '^seals/seal_.*\.json$'; then
+    echo "✖ BLOCKED: Attempt to delete committed seal JSON(s) under seals/"
+    echo "  If this is truly intentional, re-run with:"
+    echo "    GUS_ALLOW_SEAL_DELETIONS=1 git commit ..."
+    exit 1
+  fi
+fi
