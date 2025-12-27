@@ -41,6 +41,26 @@ def git_porcelain() -> list[str]:
     out = sh(["git", "status", "--porcelain"])
     return [ln for ln in out.splitlines() if ln.strip()]
 
+def rev_list(limit: int, target: str) -> list[str]:
+    out = sh(["git", "rev-list", f"--max-count={limit}", target])
+    return [ln.strip() for ln in out.splitlines() if ln.strip()]
+
+
+def find_nearest_seal(
+    seals: list[Path],
+    start_ref: str,
+    search_limit: int = 50,
+) -> tuple[str, Path] | None:
+    """
+    Walk back from start_ref (HEAD by default) to find the nearest commit that has a seal file.
+    Returns (commit12, seal_path).
+    """
+    for full_sha in rev_list(search_limit, start_ref):
+        short12 = sh(["git", "rev-parse", "--short=12", full_sha])
+        p = find_latest_seal_for_short_hash(seals, short12)
+        if p:
+            return short12, p
+    return None
 
 def only_untracked_sig_dirt(lines: list[str]) -> bool:
     """
@@ -121,6 +141,10 @@ def main() -> int:
     ap.add_argument("--sha", default=None, help="Verify a specific commit SHA (or short SHA) instead of HEAD.")
     ap.add_argument("--allow-artifacts", action="store_true", help="Allow untracked artifacts/ directory (LOCAL ONLY)")
     ap.add_argument("--ci", action="store_true", help="CI mode: forbid uncommitted seal JSONs; allow only .sig as untracked dirt")
+    ap.add_argument("--nearest", action="store_true",
+                    help="If target has no seal, search ancestors for nearest sealed commit (default).")
+    ap.add_argument("--require-target", action="store_true",
+                    help="Require that the target itself has a seal (no ancestor fallback).")
 
     pol = ap.add_mutually_exclusive_group()
     pol.add_argument("--sig-strict", action="store_true", help="require signature; refuse dirty tree (default for signed verification)")
@@ -170,7 +194,20 @@ def main() -> int:
         hs = sh(["git", "rev-parse", "--short=12", target])
         p = find_latest_seal_for_short_hash(seals, hs)
 
-        used_fallback_parent = False
+        nearest_mode = args.nearest or (not args.require_target)
+
+        if not p and nearest_mode:
+            found = find_nearest_seal(seals, target, search_limit=50)
+            if not found:
+                raise SystemExit(f"{sym('fail')} No seal found for {who} (searched {target} and ancestors)")
+            nearest_hs, p = found
+            print(f"{sym('arrow')} NOTE: {who} {hs} has no seal; using nearest sealed ancestor {nearest_hs}")
+
+        if not p:
+            raise SystemExit(f"{sym('fail')} No seal found for {who} short hash (12): {hs}")
+
+        print(f"{sym('arrow')} Verifying {who} seal: {p}")
+        verify_one(...)
 
         # 2) Fallback policy: if verifying HEAD (or HEAD-like), allow parent commit (HEAD^1)
         # This prevents infinite "seal chase" after merges/PRs where HEAD changes.
