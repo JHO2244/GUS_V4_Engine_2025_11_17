@@ -60,28 +60,6 @@ python -m layer0_uam_v4.linguistic.linguistic_guard || true
 
 echo "OK: normal gate passed."
 
-# 🧱 Seal Guardrails (runs in BOTH pre-commit and normal modes)
-# Policy: seals/seal_*.json are immutable once tracked.
-# Allowed staged ops for seals: only "A" (new seal additions).
-# Block D/M/R (delete/modify/rename) to prevent “D seals/…” chaos.
-if [[ "${GUS_ALLOW_SEAL_DELETIONS:-0}" != "1" ]]; then
-  SEAL_CHANGES="$(git diff --cached --name-status -- seals/seal_*.json || true)"
-
-  if [[ -n "${SEAL_CHANGES}" ]]; then
-    # Any staged change not starting with "A<space>" is blocked (D, M, R, etc.)
-    if echo "${SEAL_CHANGES}" | awk '$1 != "A" {print}' | grep -q '.'; then
-      echo "✖ BLOCKED: Attempt to modify/delete/rename tracked seal JSON(s) under seals/"
-      echo "  Staged seal changes:"
-      echo "${SEAL_CHANGES}"
-      echo ""
-      echo "  Allowed: only ADD (A) new seals/seal_*.json"
-      echo "  If this is truly intentional, re-run with:"
-      echo "    GUS_ALLOW_SEAL_DELETIONS=1 git commit ..."
-      exit 1
-    fi
-  fi
-fi
-
 # 🚫 Block accidental deletion of committed seal JSONs
 # Allow override only if user explicitly sets: GUS_ALLOW_SEAL_DELETIONS=1
 if [[ "${GUS_ALLOW_SEAL_DELETIONS:-0}" != "1" ]]; then
