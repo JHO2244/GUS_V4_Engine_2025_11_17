@@ -190,10 +190,13 @@ def main() -> int:
         who = "SHA" if args.sha else "HEAD"
         target = args.sha if args.sha else "HEAD"
 
+        used_fallback_parent = False
+
         # 1) Try target (HEAD or provided --sha)
         hs = sh(["git", "rev-parse", "--short=12", target])
         p = find_latest_seal_for_short_hash(seals, hs)
 
+        # Policy: by default we allow nearest-ancestor fallback unless --require-target was set
         nearest_mode = args.nearest or (not args.require_target)
 
         if not p and nearest_mode:
@@ -203,22 +206,15 @@ def main() -> int:
             nearest_hs, p = found
             print(f"{sym('arrow')} NOTE: {who} {hs} has no seal; using nearest sealed ancestor {nearest_hs}")
 
-        if not p:
-            raise SystemExit(f"{sym('fail')} No seal found for {who} short hash (12): {hs}")
-
-        print(f"{sym('arrow')} Verifying {who} seal: {p}")
-        verify_one(...)
-
-        # 2) Fallback policy: if verifying HEAD (or HEAD-like), allow parent commit (HEAD^1)
-        # This prevents infinite "seal chase" after merges/PRs where HEAD changes.
-        if (not p) and (not args.sha):
+        # Optional: parent fallback ONLY for HEAD (not --sha), and ONLY if we still have no seal
+        if not p and (not args.sha):
             parent = "HEAD^1"
             hs_parent = sh(["git", "rev-parse", "--short=12", parent])
-            p = find_latest_seal_for_short_hash(seals, hs_parent)
-            if p:
+            p_parent = find_latest_seal_for_short_hash(seals, hs_parent)
+            if p_parent:
                 used_fallback_parent = True
-                hs = hs_parent  # for clearer reporting
-                target = parent
+                hs = hs_parent
+                p = p_parent
                 who = "HEAD^1"
 
         if not p:
