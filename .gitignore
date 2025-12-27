@@ -79,3 +79,6 @@ seals/*.json
 
 # Allow tracking of canonical epoch/head seals (explicit allow)
 !seals/seal_*.json
+
+# CI Spine v0.3 — generated attestations (outputs only)
+attestations/*.json
