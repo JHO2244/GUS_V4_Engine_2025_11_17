@@ -35,6 +35,74 @@ check_working_tree_cleanliness() {
   fi
 }
 
+is_epoch_anchor_tag() {
+  local tag="$1"
+  [[ "$tag" == epoch_*_anchor_* ]]
+}
+
+commit_has_epoch_anchor_tag() {
+  local commit="$1"
+  local tags
+  tags="$(git tag --points-at "$commit" 2>/dev/null || true)"
+  while IFS= read -r t; do
+    [[ -z "$t" ]] && continue
+    if is_epoch_anchor_tag "$t"; then
+      return 0
+    fi
+  done <<< "$tags"
+  return 1
+}
+
+extract_hash12_from_seal_filename() {
+  local path="$1"
+  local base
+  base="$(basename "$path")"
+  echo "$base" | sed -E 's/^seal_([0-9a-f]{12})_.*/\1/'
+}
+
+enforce_seal_adds_are_for_anchor_commits() {
+  # Enforce ONLY for staged seal JSON adds
+  local added
+  added="$(git diff --cached --name-status | awk '$1=="A" {print $2}' | grep -E '^seals/seal_.*\.json$' || true)"
+  [[ -z "$added" ]] && return 0
+
+  local bad=0
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    local h12 commit
+    h12="$(extract_hash12_from_seal_filename "$f")"
+
+    if [[ ! "$h12" =~ ^[0-9a-f]{12}$ ]]; then
+      echo "✖ BLOCKED: seal filename does not contain a valid 12-char hash: $f"
+      bad=1
+      continue
+    fi
+
+    commit="$(git rev-parse "${h12}^{commit}" 2>/dev/null || true)"
+    if [[ -z "$commit" ]]; then
+      echo "✖ BLOCKED: seal hash does not resolve to a commit: $h12 (file: $f)"
+      bad=1
+      continue
+    fi
+
+    if ! commit_has_epoch_anchor_tag "$commit"; then
+      echo "✖ BLOCKED: seal add is NOT for an approved epoch anchor commit"
+      echo "  Seal file:   $f"
+      echo "  Commit:      $h12"
+      echo "  Required:    a tag matching epoch_*_anchor_* must point to that commit"
+      echo "  Found tags:  $(git tag --points-at "$commit" | tr '\n' ' ')"
+      bad=1
+    fi
+  done <<< "$added"
+
+  if [[ "$bad" == "1" ]]; then
+    echo
+    echo "If this is truly intentional, re-run with:"
+    echo "  GUS_ALLOW_SEAL_CHANGES=1 git commit ..."
+    exit 1
+  fi
+}
+
 enforce_seals_policy() {
   # 🚫 Block ANY staged changes under seals/ except:
   #   ✅ A seals/seal_*.json
