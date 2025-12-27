@@ -166,10 +166,29 @@ def main() -> int:
         who = "SHA" if args.sha else "HEAD"
         target = args.sha if args.sha else "HEAD"
 
+        # 1) Try target (HEAD or provided --sha)
         hs = sh(["git", "rev-parse", "--short=12", target])
         p = find_latest_seal_for_short_hash(seals, hs)
+
+        used_fallback_parent = False
+
+        # 2) Fallback policy: if verifying HEAD (or HEAD-like), allow parent commit (HEAD^1)
+        # This prevents infinite "seal chase" after merges/PRs where HEAD changes.
+        if (not p) and (not args.sha):
+            parent = "HEAD^1"
+            hs_parent = sh(["git", "rev-parse", "--short=12", parent])
+            p = find_latest_seal_for_short_hash(seals, hs_parent)
+            if p:
+                used_fallback_parent = True
+                hs = hs_parent  # for clearer reporting
+                target = parent
+                who = "HEAD^1"
+
         if not p:
             raise SystemExit(f"{sym('fail')} No seal found for {who} short hash (12): {hs}")
+
+        if used_fallback_parent:
+            print(f"{sym('arrow')} NOTE: HEAD seal not found; accepting parent commit seal (HEAD^1) by policy.")
 
         print(f"{sym('arrow')} Verifying {who} seal: {p}")
         verify_one(
