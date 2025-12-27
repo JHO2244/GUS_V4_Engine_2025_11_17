@@ -193,7 +193,7 @@ def main() -> int:
         used_fallback_parent = False
 
         # 1) Try target (HEAD or provided --sha)
-        hs = sh(["git", "rev-parse", "--short=12", target])
+        hs = sh(["git", "rev-parse", "--short=12", f"{target}^{{}}"])
         p = find_latest_seal_for_short_hash(seals, hs)
 
         # Policy: by default we allow nearest-ancestor fallback unless --require-target was set
