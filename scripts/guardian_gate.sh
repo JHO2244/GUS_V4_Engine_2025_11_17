@@ -274,6 +274,12 @@ main() {
     python -m scripts.verify_repo_seals --head --no-sig
   fi
 
+  # (optional) enforce_head_seal_strictness || exit 1
+
+python -m scripts.verify_repo_seals --head --no-sig
+python -m layer0_uam_v4.linguistic.linguistic_guard || true
+
+echo "OK: normal gate passed."
   # 🧠 Linguistic Guard (non-blocking)
   python -m layer0_uam_v4.linguistic.linguistic_guard || true
 
