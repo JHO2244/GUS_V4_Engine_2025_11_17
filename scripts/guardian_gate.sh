@@ -1,23 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
+# ---------------------------
+# Guardian Gate (safe to source)
+# ---------------------------
 
-# --- recursion guard (SINGLE, authoritative) ---
-if [[ "${GUS_GUARDIAN_GATE_RUNNING:-0}" == "1" ]]; then
-  echo "ERROR: BLOCKED: Guardian Gate recursion detected."
-  exit 1
-fi
-export GUS_GUARDIAN_GATE_RUNNING=1
-trap 'unset GUS_GUARDIAN_GATE_RUNNING' EXIT
-
-MODE="normal"
-if [[ "${1:-}" == "--pre-commit" ]]; then
-  MODE="pre-commit"
-fi
-
-die() { echo "✖ $*" >&2; exit 1; }
+die() { echo "✖ $*" >&2; return 1; }
 
 # --- Seal strictness policy (anti-drift + milestone exactness) ---
 
@@ -177,7 +165,7 @@ enforce_seal_adds_are_for_anchor_commits() {
     echo
     echo "If this is truly intentional, re-run with:"
     echo "  GUS_ALLOW_SEAL_CHANGES=1 git commit ..."
-    exit 1
+    return 1
   fi
 }
 
@@ -186,12 +174,13 @@ enforce_seals_policy() {
   #   ✅ A seals/seal_*.json
   #   ✅ A seals/*.sig
   #
-  # Extra lock: seal_*.json adds must be for epoch_*_anchor_* commits only.
+  # Override ONLY if explicitly set: GUS_ALLOW_SEAL_CHANGES=1
   if [[ "${GUS_ALLOW_SEAL_CHANGES:-0}" == "1" ]]; then
     echo "⚠ NOTE: GUS_ALLOW_SEAL_CHANGES=1 set — seals/ policy bypassed."
     return 0
   fi
 
+  # Nothing staged -> nothing to enforce
   if git diff --cached --quiet; then
     return 0
   fi
@@ -205,6 +194,7 @@ enforce_seals_policy() {
     path1="$(awk '{print $2}' <<<"$line")"
     path2="$(awk '{print $3}' <<<"$line")"
 
+    # For rename/copy, any touch of seals/ is forbidden
     if [[ "$status" =~ ^R|^C ]]; then
       if [[ "${path1:-}" == seals/* || "${path2:-}" == seals/* ]]; then
         bad+="$line"$'\n'
@@ -212,14 +202,17 @@ enforce_seals_policy() {
       continue
     fi
 
+    # Only care about seals/ paths
     if [[ "${path1:-}" != seals/* ]]; then
       continue
     fi
 
+    # Allow ONLY added seal json
     if [[ "$status" == "A" && "$path1" =~ ^seals/seal_.*\.json$ ]]; then
       continue
     fi
 
+    # Allow ONLY added sig files
     if [[ "$status" == "A" && "$path1" =~ ^seals/.*\.sig$ ]]; then
       continue
     fi
@@ -239,30 +232,57 @@ enforce_seals_policy() {
     echo
     echo "If this is truly intentional, re-run with:"
     echo "  GUS_ALLOW_SEAL_CHANGES=1 git commit ..."
-    exit 1
+    return 1
   fi
 
+  # Extra lock: seal JSON adds must be for epoch anchor commits only
   enforce_seal_adds_are_for_anchor_commits
 }
 
-echo "🛡 ${MODE}: Guardian Gate"
-echo "Repo: ${REPO_ROOT}"
+main() {
+  REPO_ROOT="$(git rev-parse --show-toplevel)"
+  cd "$REPO_ROOT"
 
-check_working_tree_cleanliness
-enforce_seals_policy
+  # --- recursion guard (SINGLE, authoritative) ---
+  if [[ "${GUS_GUARDIAN_GATE_RUNNING:-0}" == "1" ]]; then
+    echo "ERROR: BLOCKED: Guardian Gate recursion detected."
+    exit 1
+  fi
+  export GUS_GUARDIAN_GATE_RUNNING=1
+  trap 'unset GUS_GUARDIAN_GATE_RUNNING' EXIT
 
-if [[ "${MODE}" == "pre-commit" ]]; then
-  echo "OK: pre-commit gate passed."
-  exit 0
+  MODE="normal"
+  if [[ "${1:-}" == "--pre-commit" ]]; then
+    MODE="pre-commit"
+  fi
+
+  echo "🛡 ${MODE}: Guardian Gate"
+  echo "Repo: ${REPO_ROOT}"
+
+  check_working_tree_cleanliness || exit 1
+  enforce_seals_policy || exit 1
+
+  if [[ "${MODE}" == "pre-commit" ]]; then
+    echo "OK: pre-commit gate passed."
+    exit 0
+  fi
+
+  # NORMAL gate: verify seals (content-only by default)
+  if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
+    python -m scripts.verify_repo_seals --head --sig-strict
+  else
+    python -m scripts.verify_repo_seals --head --no-sig
+  fi
+
+  # 🧠 Linguistic Guard (non-blocking)
+  python -m layer0_uam_v4.linguistic.linguistic_guard || true
+
+  echo "OK: normal gate passed."
+}
+
+# ✅ KEY FIX:
+# If sourced, do nothing (only load functions).
+# If executed, run main.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
 fi
-
-# NORMAL gate:
-if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
-  python -m scripts.verify_repo_seals --head --sig-strict
-else
-  python -m scripts.verify_repo_seals --head --no-sig
-fi
-
-python -m layer0_uam_v4.linguistic.linguistic_guard || true
-
-echo "OK: normal gate passed."
