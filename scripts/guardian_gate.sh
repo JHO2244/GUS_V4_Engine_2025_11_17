@@ -42,9 +42,8 @@ is_epoch_anchor_tag() {
 
 commit_has_epoch_anchor_tag() {
   local commit="$1"
-  # List tags pointing at commit; return 0 if any matches epoch_*_anchor_*
   local tags
-  tags="$(git tag --points-at "$commit" || true)"
+  tags="$(git tag --points-at "$commit" 2>/dev/null || true)"
   while IFS= read -r t; do
     [[ -z "$t" ]] && continue
     if is_epoch_anchor_tag "$t"; then
@@ -59,13 +58,10 @@ extract_hash12_from_seal_filename() {
   local path="$1"
   local base
   base="$(basename "$path")"
-  # strip prefix + everything after next underscore
-  # seal_<HASH12>_...
   echo "$base" | sed -E 's/^seal_([0-9a-f]{12})_.*/\1/'
 }
 
 enforce_seal_adds_are_for_anchor_commits() {
-  # Only enforce if there are staged additions under seals/
   local added
   added="$(git diff --cached --name-status | awk '$1=="A" {print $2}' | grep -E '^seals/seal_.*\.json$' || true)"
   [[ -z "$added" ]] && return 0
@@ -76,14 +72,12 @@ enforce_seal_adds_are_for_anchor_commits() {
     local h12 commit
     h12="$(extract_hash12_from_seal_filename "$f")"
 
-    # sanity check
     if [[ ! "$h12" =~ ^[0-9a-f]{12}$ ]]; then
       echo "✖ BLOCKED: seal filename does not contain a valid 12-char hash: $f"
       bad=1
       continue
     fi
 
-    # resolve the hash to a commit object
     commit="$(git rev-parse "${h12}^{commit}" 2>/dev/null || true)"
     if [[ -z "$commit" ]]; then
       echo "✖ BLOCKED: seal hash does not resolve to a commit: $h12 (file: $f)"
@@ -96,7 +90,7 @@ enforce_seal_adds_are_for_anchor_commits() {
       echo "  Seal file:   $f"
       echo "  Commit:      $h12"
       echo "  Required:    a tag matching epoch_*_anchor_* must point to that commit"
-      echo "  Found tags:  $(git tag --points-at "$commit" | tr '\n' ' ')"
+      echo "  Found tags:  $(git tag --points-at "$commit" 2>/dev/null | tr '\n' ' ')"
       bad=1
     fi
   done <<< "$added"
@@ -114,14 +108,12 @@ enforce_seals_policy() {
   #   ✅ A seals/seal_*.json
   #   ✅ A seals/*.sig
   #
-  # This prevents D/R/M chaos, renames, edits, etc.
-  # Override ONLY if explicitly set: GUS_ALLOW_SEAL_CHANGES=1
+  # Extra lock: seal_*.json adds must be for epoch_*_anchor_* commits only.
   if [[ "${GUS_ALLOW_SEAL_CHANGES:-0}" == "1" ]]; then
     echo "⚠ NOTE: GUS_ALLOW_SEAL_CHANGES=1 set — seals/ policy bypassed."
     return 0
   fi
 
-  # Nothing staged -> nothing to enforce
   if git diff --cached --quiet; then
     return 0
   fi
@@ -130,19 +122,11 @@ enforce_seals_policy() {
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
 
-    # Parse name-status lines (handles rename format too)
-    # Examples:
-    #  A\tseals/seal_x.json
-    #  M\tseals/seal_x.json
-    #  D\tseals/seal_x.json
-    #  R100\tseals/old.json\tseals/new.json
     local status path1 path2
     status="$(awk '{print $1}' <<<"$line")"
     path1="$(awk '{print $2}' <<<"$line")"
     path2="$(awk '{print $3}' <<<"$line")"
 
-    # Normalize: for rename/copy, check BOTH paths
-    # We treat ANY R/C touching seals/ as forbidden by default.
     if [[ "$status" =~ ^R|^C ]]; then
       if [[ "${path1:-}" == seals/* || "${path2:-}" == seals/* ]]; then
         bad+="$line"$'\n'
@@ -150,22 +134,18 @@ enforce_seals_policy() {
       continue
     fi
 
-    # Only care about seals/ paths
     if [[ "${path1:-}" != seals/* ]]; then
       continue
     fi
 
-    # Allow ONLY added seal json
     if [[ "$status" == "A" && "$path1" =~ ^seals/seal_.*\.json$ ]]; then
       continue
     fi
 
-    # Allow ONLY added sig files
     if [[ "$status" == "A" && "$path1" =~ ^seals/.*\.sig$ ]]; then
       continue
     fi
 
-    # Everything else under seals/ is forbidden
     bad+="$line"$'\n'
   done < <(git diff --cached --name-status)
 
@@ -183,6 +163,8 @@ enforce_seals_policy() {
     echo "  GUS_ALLOW_SEAL_CHANGES=1 git commit ..."
     exit 1
   fi
+
+  enforce_seal_adds_are_for_anchor_commits
 }
 
 echo "🛡 ${MODE}: Guardian Gate"
@@ -192,25 +174,17 @@ check_working_tree_cleanliness
 enforce_seals_policy
 
 if [[ "${MODE}" == "pre-commit" ]]; then
-  # FAST gate: allow ONLY approved seal adds (epoch anchor commits)
-  if [[ "${GUS_ALLOW_SEAL_CHANGES:-0}" != "1" ]]; then
-    enforce_seal_adds_are_for_anchor_commits
-  fi
   echo "OK: pre-commit gate passed."
   exit 0
 fi
 
-
 # NORMAL gate:
-# Default = content-only verification (no signature) so we don't create infinite signing loops.
-# If you want strict signatures, set GUS_STRICT_SEALS=1 explicitly.
 if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
   python -m scripts.verify_repo_seals --head --sig-strict
 else
   python -m scripts.verify_repo_seals --head --no-sig
 fi
 
-# 🧠 Linguistic Guard (non-blocking)
 python -m layer0_uam_v4.linguistic.linguistic_guard || true
 
 echo "OK: normal gate passed."
