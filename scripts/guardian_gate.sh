@@ -89,6 +89,7 @@ check_working_tree_cleanliness() {
   # Unstaged drift (untracked doesn't count here)
   if ! git diff --quiet; then
     die "Unstaged changes present. Stage or discard them first."
+    return 1
   fi
 
   # Staged changes are expected during pre-commit
@@ -97,9 +98,13 @@ check_working_tree_cleanliness() {
       echo "ℹ Staged changes detected (expected during pre-commit)."
     else
       die "Staged but uncommitted changes present. Commit them or reset the index."
+      return 1
     fi
   fi
+
+  return 0
 }
+
 
 is_epoch_anchor_tag() {
   local tag="$1"
@@ -274,21 +279,14 @@ main() {
     python -m scripts.verify_repo_seals --head --no-sig
   fi
 
-  # (optional) enforce_head_seal_strictness || exit 1
-
-python -m scripts.verify_repo_seals --head --no-sig
-python -m layer0_uam_v4.linguistic.linguistic_guard || true
-
-echo "OK: normal gate passed."
   # 🧠 Linguistic Guard (non-blocking)
   python -m layer0_uam_v4.linguistic.linguistic_guard || true
 
   echo "OK: normal gate passed."
 }
 
-# ✅ KEY FIX:
-# If sourced, do nothing (only load functions).
-# If executed, run main.
+# ✅ KEY FIX: If sourced, do nothing (only load functions). If executed, run main.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   main "$@"
 fi
+
