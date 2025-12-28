@@ -7,6 +7,84 @@ set -euo pipefail
 
 die() { echo "✖ $*" >&2; return 1; }
 
+# --- Seal strictness policy (anti-drift + milestone exactness) ---
+
+# Config:
+#   GUS_MAX_UNSEALED_COMMITS: how far HEAD may drift past the latest sealed ancestor on main.
+#   GUS_REQUIRE_SEALED_ANCHOR: if 1, epoch_*_anchor_* commits must have an exact seal (no fallback).
+GUS_MAX_UNSEALED_COMMITS="${GUS_MAX_UNSEALED_COMMITS:-2}"
+GUS_REQUIRE_SEALED_ANCHOR="${GUS_REQUIRE_SEALED_ANCHOR:-1}"
+
+head12() { git rev-parse --short=12 HEAD; }
+
+seal_exists_for_hash12() {
+  local h12="$1"
+  ls "seals/seal_${h12}_"*.json >/dev/null 2>&1
+}
+
+head_has_epoch_anchor_tag() {
+  git tag --points-at HEAD 2>/dev/null | grep -E '^epoch_.*_anchor_.*$' >/dev/null 2>&1
+}
+
+nearest_sealed_ancestor_distance_first_parent() {
+  # Walk first-parent history to avoid merge-noise and find closest commit that has a seal file present.
+  # Echoes: "<distance> <hash12>" or returns 1 if none found.
+  local i=0
+  while read -r c; do
+    local h12
+    h12="$(git rev-parse --short=12 "$c")"
+    if seal_exists_for_hash12 "$h12"; then
+      echo "$i $h12"
+      return 0
+    fi
+    i=$((i+1))
+  done < <(git rev-list --first-parent HEAD)
+  return 1
+}
+
+enforce_head_seal_strictness() {
+  # Only enforce on main (this is your operational safety rail)
+  local branch
+  branch="$(git branch --show-current 2>/dev/null || true)"
+  [[ "$branch" != "main" ]] && return 0
+
+  local h12
+  h12="$(head12)"
+
+  # Milestone exactness: if HEAD is an epoch anchor, it must have its own seal.
+  if head_has_epoch_anchor_tag && [[ "$GUS_REQUIRE_SEALED_ANCHOR" == "1" ]]; then
+    if ! seal_exists_for_hash12 "$h12"; then
+      echo "✖ BLOCKED: HEAD is tagged as an epoch anchor, but has NO exact seal committed."
+      echo "  HEAD: $h12"
+      echo "  Required file: seals/seal_${h12}_*.json"
+      echo "  Fix: create the seal for this anchor commit via the lock/seal-* PR flow."
+      exit 1
+    fi
+    return 0
+  fi
+
+  # Operational drift limit: do not allow main to drift too far from last sealed ancestor.
+  local out dist sealed_h12
+  out="$(nearest_sealed_ancestor_distance_first_parent || true)"
+  if [[ -z "$out" ]]; then
+    echo "✖ BLOCKED: No sealed ancestor found on main. You must establish an epoch anchor + seal."
+    exit 1
+  fi
+
+  dist="$(awk '{print $1}' <<<"$out")"
+  sealed_h12="$(awk '{print $2}' <<<"$out")"
+
+  if [[ "$dist" -gt "$GUS_MAX_UNSEALED_COMMITS" ]]; then
+    echo "✖ BLOCKED: main drifted too far past last sealed ancestor."
+    echo "  HEAD:           $h12"
+    echo "  Sealed ancestor:$sealed_h12"
+    echo "  Distance:       $dist commits (max allowed: $GUS_MAX_UNSEALED_COMMITS)"
+    echo
+    echo "Fix: create a new epoch_*_anchor_* tag on current main, then run the lock/seal PR flow."
+    exit 1
+  fi
+}
+
 check_working_tree_cleanliness() {
   # Unstaged drift (untracked doesn't count here)
   if ! git diff --quiet; then
