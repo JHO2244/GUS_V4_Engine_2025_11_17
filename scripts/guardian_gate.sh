@@ -1,4 +1,3 @@
-cat > scripts/guardian_gate.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -189,6 +188,3 @@ fi
 python -m layer0_uam_v4.linguistic.linguistic_guard || true
 
 echo "OK: normal gate passed."
-EOF
-
-chmod +x scripts/guardian_gate.sh 2>/dev/null || true
