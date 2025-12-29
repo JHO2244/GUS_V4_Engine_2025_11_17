@@ -272,12 +272,24 @@ main() {
     exit 0
   fi
 
-  # NORMAL gate: verify seals (content-only by default)
-  if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
-    python -m scripts.verify_repo_seals --head --sig-strict
+   # NORMAL gate: verify seals
+  # Milestone mode (file-flag) requires an exact HEAD seal (no fallback).
+  if [[ -f ".gus/milestone_required" ]]; then
+    echo "🧱 milestone: strict HEAD seal required"
+    if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
+      python -m scripts.verify_repo_seals --head --require-head --sig-strict
+    else
+      python -m scripts.verify_repo_seals --head --require-head --no-sig
+    fi
   else
-    python -m scripts.verify_repo_seals --head --no-sig
+    # Dev flow: nearest sealed ancestor fallback allowed (current behavior).
+    if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
+      python -m scripts.verify_repo_seals --head --sig-strict
+    else
+      python -m scripts.verify_repo_seals --head --no-sig
+    fi
   fi
+
 
   # 🧠 Linguistic Guard (non-blocking)
   python -m layer0_uam_v4.linguistic.linguistic_guard || true

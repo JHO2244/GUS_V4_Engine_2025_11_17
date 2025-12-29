@@ -145,12 +145,20 @@ def main() -> int:
                     help="If target has no seal, search ancestors for nearest sealed commit (default).")
     ap.add_argument("--require-target", action="store_true",
                     help="Require that the target itself has a seal (no ancestor fallback).")
+    ap.add_argument("--require-head", action="store_true",
+                    help="Alias for strict HEAD: require exact HEAD seal (no fallback).")
 
     pol = ap.add_mutually_exclusive_group()
     pol.add_argument("--sig-strict", action="store_true", help="require signature; refuse dirty tree (default for signed verification)")
     pol.add_argument("--sig-relaxed", action="store_true", help="require signature; allow ONLY untracked seals/*.sig dirt")
 
     args = ap.parse_args()
+
+    # Alias: milestone strictness
+    # --require-head means: treat target as HEAD and require an exact seal (no ancestor/parent fallback).
+    if getattr(args, "require_head", False):
+        args.head = True
+        args.require_target = True
 
     root = repo_root()
     seals_dir = root / "seals"
@@ -207,7 +215,7 @@ def main() -> int:
             print(f"{sym('arrow')} NOTE: {who} {hs} has no seal; using nearest sealed ancestor {nearest_hs}")
 
         # Optional: parent fallback ONLY for HEAD (not --sha), and ONLY if we still have no seal
-        if not p and (not args.sha):
+        if (not p) and (not args.sha) and (not args.require_target):
             parent = "HEAD^1"
             hs_parent = sh(["git", "rev-parse", "--short=12", parent])
             p_parent = find_latest_seal_for_short_hash(seals, hs_parent)
