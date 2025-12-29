@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ "main" ]
   push:
-    branches: [ "test/ci-register" ]
+    branches: [ "main" ]
   workflow_dispatch: {}
 
 permissions:
@@ -54,6 +54,12 @@ jobs:
         run: |
           set -euo pipefail
           pytest -q
+
+      - name: Guardian Gate (normal mode)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/guardian_gate.sh
 
       - name: Verify latest tracked seal (content-only)
         run: |
