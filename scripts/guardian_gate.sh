@@ -262,6 +262,8 @@ main() {
     MODE="pre-commit"
   fi
 
+
+  # --- Mode must be defined BEFORE any checks use it (set -u safety) ---
   # --- Guardrail: prevent feature commits directly on main ---
   if [[ "${MODE}" == "pre-commit" ]]; then
     branch="$(git branch --show-current 2>/dev/null || true)"
@@ -290,10 +292,6 @@ main() {
   fi
 
 
-  MODE="normal"
-  if [[ "${1:-}" == "--pre-commit" ]]; then
-    MODE="pre-commit"
-  fi
 
   echo "🛡 ${MODE}: Guardian Gate"
   echo "Repo: ${REPO_ROOT}"
