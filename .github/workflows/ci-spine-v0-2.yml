@@ -4,6 +4,8 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    branches: [ main ]
+
 
 jobs:
   integrity:
@@ -18,12 +20,18 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Install minimal crypto dependency
         run: |
           python -m pip install --upgrade pip
           pip install cryptography
+
+      - name: Epoch Enforcement Tier (STRICT only when labeled)
+        if: ${{ github.event_name == 'pull_request' && (contains(join(github.event.pull_request.labels.*.name, ','), 'epoch-lock-required') || contains(join(github.event.pull_request.labels.*.name, ','), 'milestone')) }}
+        run: |
+          echo "🧱 STRICT MODE: exact HEAD seal required (label-gated)"
+          python -m scripts.verify_repo_seals --head --require-head --no-sig
 
       - name: Verify Anchor (content-only seal presence for anchor SHA)
         run: |
