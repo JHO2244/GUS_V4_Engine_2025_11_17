@@ -256,6 +256,40 @@ main() {
   export GUS_GUARDIAN_GATE_RUNNING=1
   trap 'unset GUS_GUARDIAN_GATE_RUNNING' EXIT
 
+  # --- Mode must be defined BEFORE any checks use it (set -u safety) ---
+  MODE="normal"
+  if [[ "${1:-}" == "--pre-commit" ]]; then
+    MODE="pre-commit"
+  fi
+
+  # --- Guardrail: prevent feature commits directly on main ---
+  if [[ "${MODE}" == "pre-commit" ]]; then
+    branch="$(git branch --show-current 2>/dev/null || true)"
+    if [[ "$branch" == "main" ]]; then
+      # Prefer the *current* commit message being authored (not the last commit)
+      msg_file="$(git rev-parse --git-path COMMIT_EDITMSG 2>/dev/null || true)"
+      msg=""
+      if [[ -n "${msg_file:-}" && -f "$msg_file" ]]; then
+        msg="$(tr '[:upper:]' '[:lower:]' < "$msg_file" | sed -e 's/^[[:space:]]*//' )"
+      else
+        msg="$(git log -1 --pretty=%B | tr '[:upper:]' '[:lower:]')"
+      fi
+
+      if [[ "$msg" =~ ^feat\( || "$msg" =~ ^feat: || "$msg" =~ ^feature ]]; then
+        echo "✖ BLOCKED: Feature commits are not allowed directly on main."
+        echo
+        echo "Reason:"
+        echo "  main is protected for merge-only feature integration."
+        echo
+        echo "Fix:"
+        echo "  git switch -c feat/<short-name>"
+        echo "  git commit ..."
+        exit 1
+      fi
+    fi
+  fi
+
+
   MODE="normal"
   if [[ "${1:-}" == "--pre-commit" ]]; then
     MODE="pre-commit"
