@@ -82,3 +82,6 @@ seals/*.json
 
 # CI Spine v0.3 — generated attestations (outputs only)
 attestations/*.json
+
+# allow canonical policy docs
+!docs/EPOCH_CADENCE.md
