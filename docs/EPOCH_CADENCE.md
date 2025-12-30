@@ -32,3 +32,12 @@ Goal: keep `main` **ALL GREEN** with minimal friction and no seal/anchor loops.
 ## Non-negotiables
 - Never edit `seals/` except via the approved lock/seal PR flow.
 - Keep drift small; epoch anchors are your integrity checkpoints.
+
+## Quick Lock (1-line muscle memory)
+Run this when `main` drifts and you want to go ALL GREEN immediately (creates a unique epoch tag + prep branch):
+
+```bash
+EPOCH_TAG=epoch_$(date -u +%Y%m%dT%H%M%SZ)_anchor_main PREP_BRANCH=chore/epoch-anchor-$(date -u +%Y%m%dT%H%M%SZ) bash scripts/epoch_lock_prep.sh
+```
+
+Then open a PR (Base: `main`, Compare: the printed `PREP_BRANCH`) and merge.
