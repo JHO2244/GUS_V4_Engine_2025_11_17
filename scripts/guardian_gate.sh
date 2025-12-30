@@ -12,7 +12,7 @@ die() { echo "✖ $*" >&2; return 1; }
 # Config:
 #   GUS_MAX_UNSEALED_COMMITS: how far HEAD may drift past the latest sealed ancestor on main.
 #   GUS_REQUIRE_SEALED_ANCHOR: if 1, epoch_*_anchor_* commits must have an exact seal (no fallback).
-GUS_MAX_UNSEALED_COMMITS=""
+GUS_MAX_UNSEALED_COMMITS="${GUS_MAX_UNSEALED_COMMITS:-1}"
 GUS_REQUIRE_SEALED_ANCHOR="${GUS_REQUIRE_SEALED_ANCHOR:-1}"
 
 head12() { git rev-parse --short=12 HEAD; }
@@ -74,11 +74,14 @@ enforce_head_seal_strictness() {
   dist="$(awk '{print $1}' <<<"$out")"
   sealed_h12="$(awk '{print $2}' <<<"$out")"
 
-  if [[ "$dist" -gt "$GUS_MAX_UNSEALED_COMMITS" ]]; then
+  effective_max="$GUS_MAX_UNSEALED_COMMITS"
+  if [[ "${effective_max:-}" -eq 0 ]]; then effective_max=1; fi
+
+  if [[ "$dist" -gt "$effective_max" ]]; then
     echo "✖ BLOCKED: main drifted too far past last sealed ancestor."
     echo "  HEAD:           $h12"
     echo "  Sealed ancestor:$sealed_h12"
-    echo "  Distance:       $dist commits (max allowed: $GUS_MAX_UNSEALED_COMMITS)"
+    echo "  Distance:       $dist commits (max allowed: $effective_max)"
     echo
     echo "Fix: create a new epoch_*_anchor_* tag on current main, then run the lock/seal PR flow."
     exit 1
@@ -247,8 +250,6 @@ enforce_seals_policy() {
 # --- Main drift guard (dev mode safety rail) ---
 # Config:
 #   GUS_MAX_UNSEALED_COMMITS: max distance HEAD is allowed to be past nearest sealed ancestor on main.
-GUS_MAX_UNSEALED_COMMITS=""
-
 head12() { git rev-parse --short=12 HEAD; }
 
 seal_exists_for_hash12() {
