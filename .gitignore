@@ -85,3 +85,6 @@ attestations/*.json
 
 # allow canonical policy docs
 !docs/EPOCH_CADENCE.md
+
+# allow canonical helper scripts
+!scripts/epoch_lock_prep.sh
