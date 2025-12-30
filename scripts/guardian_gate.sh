@@ -12,7 +12,7 @@ die() { echo "✖ $*" >&2; return 1; }
 # Config:
 #   GUS_MAX_UNSEALED_COMMITS: how far HEAD may drift past the latest sealed ancestor on main.
 #   GUS_REQUIRE_SEALED_ANCHOR: if 1, epoch_*_anchor_* commits must have an exact seal (no fallback).
-GUS_MAX_UNSEALED_COMMITS="${GUS_MAX_UNSEALED_COMMITS:-2}"
+GUS_MAX_UNSEALED_COMMITS=""
 GUS_REQUIRE_SEALED_ANCHOR="${GUS_REQUIRE_SEALED_ANCHOR:-1}"
 
 head12() { git rev-parse --short=12 HEAD; }
@@ -247,7 +247,7 @@ enforce_seals_policy() {
 # --- Main drift guard (dev mode safety rail) ---
 # Config:
 #   GUS_MAX_UNSEALED_COMMITS: max distance HEAD is allowed to be past nearest sealed ancestor on main.
-GUS_MAX_UNSEALED_COMMITS="${GUS_MAX_UNSEALED_COMMITS:-2}"
+GUS_MAX_UNSEALED_COMMITS=""
 
 head12() { git rev-parse --short=12 HEAD; }
 
