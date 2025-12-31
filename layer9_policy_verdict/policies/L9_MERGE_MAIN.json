@@ -1,0 +1,6 @@
+{
+  "policy_id": "L9_MERGE_MAIN",
+  "policy_version": "v1",
+  "thresholds": { "allow": 9.8, "warn": 9.0 },
+  "base_score": 9.8
+}
