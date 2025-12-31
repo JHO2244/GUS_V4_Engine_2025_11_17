@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "description": "GUS v4 audit ledger entry schema (skeleton).",
+  "fields": {
+    "entry_id":        { "type": "string" },
+    "created_at_utc":  { "type": "string" },
+    "decision":        { "type": "object" },
+    "execution":       { "type": "object" },
+    "certificate":     { "type": "object" },
+    "prev_hash":       { "type": "string" },
+    "entry_hash":      { "type": "string" }
+  }
+}
