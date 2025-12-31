@@ -1,0 +1,6 @@
+{
+  "policy_id": "L9_BASE_STRICT",
+  "policy_version": "v1",
+  "thresholds": { "allow": 9.7, "warn": 8.5 },
+  "base_score": 9.7
+}
