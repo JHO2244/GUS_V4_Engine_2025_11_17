@@ -43,12 +43,12 @@ DATE_UTC="$(date -u +%Y%m%d)"
 TIME_UTC="$(date -u +%Y%m%dT%H%M%SZ)"
 HEAD12="$(git rev-parse --short=12 HEAD)"
 
-EPOCH_TAG="${EPOCH_TAG:-epoch_${DATE_UTC}_anchor_main}"
+EPOCH_TAG="${EPOCH_TAG:-epoch_${TIME_UTC}_anchor_main}"
 # Back-compat: allow BRANCH=... to behave like PREP_BRANCH=...
 if [[ -n "${BRANCH:-}" && -z "${PREP_BRANCH:-}" ]]; then
   PREP_BRANCH="$BRANCH"
 fi
-PREP_BRANCH="${PREP_BRANCH:-chore/epoch-anchor-${DATE_UTC}}"
+PREP_BRANCH="${PREP_BRANCH:-chore/epoch-anchor-${TIME_UTC}}"
 
 # Tag must not already exist (local or remote)
 if git rev-parse -q --verify "refs/tags/${EPOCH_TAG}" >/dev/null; then
