@@ -1,5 +1,4 @@
 {
-  "locked": false,
-  "notes": "Layer X lock manifest – skeleton only."
+  "locked": true,
+  "notes": "Locked after continuity/replication manifests were populated and validated (Phase 3)."
 }
-
