@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from utils import get_guardian_logger
+from utils.guardian_logging_stub import get_guardian_logger
 
 logger = get_guardian_logger("GUSv4.Layer8")
 
 BASE_DIR = Path(__file__).resolve().parent
-LEDGER_PATH = BASE_DIR / "gus_v4_audit_ledger.json"
+LEDGER_PATH = Path(os.environ.get("GUS_V4_LEDGER_PATH", str(BASE_DIR / "gus_v4_audit_ledger.json")))
 
 
 @dataclass
