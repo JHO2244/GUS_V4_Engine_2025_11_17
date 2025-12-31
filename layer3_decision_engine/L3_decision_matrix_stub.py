@@ -57,3 +57,47 @@ def load_decision_engine_status() -> DecisionEngineStatus:
         fields_count=fields_count,
         errors=errors,
     )
+
+def run_decision(context: Dict, requested_action: str, layer_origin: int) -> Dict:
+    """
+    Minimal working Layer 3 pipeline (safe, deterministic).
+    Flow: Context Evaluator -> Decision Object -> Authorization -> Status.
+    """
+    # Local imports to avoid circular imports during skeleton phase
+    from layer3_decision_engine.L3_context_evaluator_stub import evaluate_context
+    from layer3_decision_engine.L3_authorization_stub import authorize_decision
+
+    # Basic input validation (schema-aligned, minimal)
+    if not isinstance(context, dict):
+        raise TypeError("context must be a dict")
+    if not isinstance(requested_action, str) or not requested_action.strip():
+        raise ValueError("requested_action must be a non-empty string")
+    if not isinstance(layer_origin, int) or layer_origin < 0 or layer_origin > 4:
+        raise ValueError("layer_origin must be an int in range 0–4")
+
+    # Context gate
+    context_ok = evaluate_context(context)
+
+    decision: Dict = {
+        "decision_id": "L3-SKELETON-001",
+        "requested_action": requested_action.strip(),
+        "layer_origin": layer_origin,
+        "status": "pending",
+    }
+
+    if not context_ok:
+        decision["status"] = "aborted"
+        logger.warning("Decision aborted: context evaluator rejected context.")
+        return decision
+
+    # Authorization gate
+    authorized = authorize_decision(decision)
+    decision["status"] = "approved" if authorized else "denied"
+
+    logger.info(
+        "run_decision(): status=%s action=%s origin=%s",
+        decision["status"],
+        decision["requested_action"],
+        decision["layer_origin"],
+    )
+    return decision
