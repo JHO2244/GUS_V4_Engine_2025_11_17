@@ -1,4 +1,6 @@
 from __future__ import annotations
+from layer9_policy_verdict.src.ruleset import apply_ruleset_v1, score_from_policy_and_rules
+
 import hashlib
 import json
 from typing import Any, Dict, List, Optional
@@ -35,24 +37,21 @@ def evaluate_policy(
     t_allow = float(thresholds.get("allow", 9.7))
     t_warn = float(thresholds.get("warn", 8.5))
 
-    # Placeholder scoring logic (will be upgraded after tests are green)
-    base_score = float(policy.get("base_score", 9.7))
-    score = max(0.0, min(10.0, base_score))
+    # Apply deterministic ruleset v1 and compute final score + reasons
+    base_score = float(policy.get("base_score", 10.0))
+    rules = apply_ruleset_v1(action=action, context=context)
+    score, reasons = score_from_policy_and_rules(base_score=base_score, rules=rules)
 
+    # Level decision by thresholds (use defaults-safe values)
     if score >= t_allow:
         level = VerdictLevel.ALLOW
-        reasons = ["Policy thresholds satisfied (ALLOW)."]
     elif score >= t_warn:
         level = VerdictLevel.WARN
-        reasons = ["Policy thresholds satisfied (WARN)."]
     else:
         level = VerdictLevel.BLOCK
-        reasons = ["Policy thresholds failed (BLOCK)."]
 
-    evidence: Dict[str, Any] = {
-        "thresholds": {"allow": t_allow, "warn": t_warn},
-        "base_score": base_score,
-    }
+    # Evidence is reserved for future expansion (keep deterministic)
+    evidence: Dict[str, Any] = {}
 
     object_core = {
         "level": level.value,
