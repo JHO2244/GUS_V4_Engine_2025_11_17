@@ -4,6 +4,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 from .verdict_types import PolicyVerdict, VerdictLevel
+from .policy_schema import require_policy_v1
 
 def _stable_hash(obj: Dict[str, Any]) -> str:
     blob = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
@@ -28,6 +29,8 @@ def evaluate_policy(
     - reasons non-empty
     - object_hash hashes (action, context, policy, epoch_ref, chain_head, derived fields except object_hash)
     """
+    require_policy_v1(policy)
+
     thresholds = policy.get("thresholds", {})
     t_allow = float(thresholds.get("allow", 9.7))
     t_warn = float(thresholds.get("warn", 8.5))

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gus:L9:policy:v1",
+  "title": "GUS L9 Policy (v1)",
+  "description": "Schema for GUS Layer 9 policy objects governing verdict evaluation.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "policy_id",
+    "thresholds"
+  ],
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for the policy."
+    },
+    "policy_version": {
+      "type": "string",
+      "default": "v1",
+      "description": "Policy schema version."
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allow",
+        "warn"
+      ],
+      "properties": {
+        "allow": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 10.0,
+          "description": "Minimum score required for ALLOW verdict."
+        },
+        "warn": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 10.0,
+          "description": "Minimum score required for WARN verdict."
+        }
+      }
+    },
+    "base_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 10.0,
+      "description": "Optional base score used by the policy engine before clamping."
+    }
+  }
+}
