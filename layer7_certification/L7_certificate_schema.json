@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "description": "GUS v4 certification record schema (skeleton).",
+  "fields": {
+    "certificate_id": { "type": "string" },
+    "issued_at_utc":  { "type": "string" },
+    "engine_version": { "type": "string" },
+    "subject":        { "type": "object" },
+    "scores":         { "type": "object" },
+    "receipt_hash":   { "type": "string" },
+    "notes":          { "type": "string" }
+  }
+}
