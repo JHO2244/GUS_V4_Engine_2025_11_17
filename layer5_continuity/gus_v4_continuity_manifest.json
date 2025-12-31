@@ -1,24 +1,25 @@
 {
+  "engine_version": "GUS_v4.dev",
+  "pas_version": "PAS_v0.2",
   "backup_paths": [
     "Z:\\GuardianBackups\\GUS_V4"
   ],
+  "last_all_green_commit": "eb060eb",
+  "last_all_green_timestamp": "2025-12-31T13:10:31Z",
+  "test_summary": {
+    "total": 55,
+    "passed": 55,
+    "failed": 0,
+    "skipped": 0
+  },
   "continuity_entries": [
     {
-      "commit": "UNKNOWN_COMMIT",
       "id": "bootstrap_all_green",
-      "notes": "Bootstrap continuity snapshot created automatically.",
       "status": "ok",
-      "timestamp": "UNKNOWN_TIMESTAMP"
+      "commit": "eb060eb",
+      "timestamp": "2025-12-31T13:10:31Z",
+      "notes": "Bootstrap continuity snapshot created automatically."
     }
-  ],
-  "engine_version": "GUS_v4.dev",
-  "last_all_green_commit": "UNKNOWN_COMMIT",
-  "last_all_green_timestamp": "UNKNOWN_TIMESTAMP",
-  "pas_version": "PAS_v0.2",
-  "test_summary": {
-    "failed": 0,
-    "passed": 0,
-    "skipped": 0,
-    "total": 0
-  }
+  ]
 }
+
