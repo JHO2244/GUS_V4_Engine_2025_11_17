@@ -88,3 +88,5 @@ attestations/*.json
 
 # allow canonical helper scripts
 !scripts/epoch_lock_prep.sh
+
+layer8_audit_ledger/gus_v4_audit_ledger.json
