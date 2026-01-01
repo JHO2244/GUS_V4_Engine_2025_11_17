@@ -38,7 +38,7 @@ def test_wrong_version_is_rejected(tmp_path, ver):
     assert "v4" in (r.error or "").lower()
 
 
-@pytest.mark.parametrize("val", ["ALLOW", "warn", "", None, 123])
+@pytest.mark.parametrize("val", ["ALLOW", "", None, 123])
 def test_on_uncertainty_must_be_warn_or_block(tmp_path, val):
     obj = {"charter_version": "v4", "failure_posture": {"on_uncertainty": val}}
     p = _write(tmp_path, obj)
@@ -58,4 +58,11 @@ def test_requires_failure_posture_object(tmp_path):
 
 def test_load_real_charter_is_ok():
     r = load_charter_v4(CHARTER)
+    assert r.ok and r.charter is not None
+
+
+def test_on_uncertainty_is_case_insensitive(tmp_path):
+    obj = {"charter_version": "v4", "failure_posture": {"on_uncertainty": "warn"}}
+    p = _write(tmp_path, obj)
+    r = load_charter_v4(p)
     assert r.ok and r.charter is not None

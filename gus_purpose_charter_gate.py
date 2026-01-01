@@ -53,3 +53,12 @@ def load_charter_v4(path: Path = CHARTER_PATH) -> CharterLoadResult:
 
     except Exception as e:
         return CharterLoadResult(ok=False, charter=None, error=str(e))
+
+    return CharterLoadResult(ok=True, charter=data, error=None)
+
+
+def require_charter_v4() -> Dict[str, Any]:
+    r = load_charter_v4()
+    if not r.ok or r.charter is None:
+        raise CharterError(r.error or "Purpose Charter invalid")
+    return r.charter
