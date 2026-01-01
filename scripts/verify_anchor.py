@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from pathlib import Path
 from __future__ import annotations
 from utils.canonical_json import write_canonical_json_file
 
@@ -22,7 +23,18 @@ import argparse
 import os
 import subprocess
 import sys
+# Ensure repo root is importable even when running as a script (python scripts/verify_anchor.py)
+REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT_FOR_IMPORT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT_FOR_IMPORT))
+
 import tempfile
+# Ensure repo root is importable even when running as a script (python scripts/verify_anchor.py)
+REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT_FOR_IMPORT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT_FOR_IMPORT))
+
+
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
