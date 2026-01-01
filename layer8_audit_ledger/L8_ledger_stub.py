@@ -6,14 +6,33 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from utils.guardian_logging_stub import get_guardian_logger
 
 logger = get_guardian_logger("GUSv4.Layer8")
 
 BASE_DIR = Path(__file__).resolve().parent
-LEDGER_PATH = Path(os.environ.get("GUS_V4_LEDGER_PATH", str(BASE_DIR / "gus_v4_audit_ledger.json")))
+
+
+def _resolve_ledger_path() -> Path:
+    """
+    Portability guarantee:
+    - If GUS_V4_LEDGER_PATH is unset → default under BASE_DIR.
+    - If set to a relative path → resolve under BASE_DIR (NOT CWD).
+    - If set to an absolute path → use as-is.
+    """
+    raw = os.environ.get("GUS_V4_LEDGER_PATH")
+    if not raw:
+        return (BASE_DIR / "gus_v4_audit_ledger.json").resolve()
+
+    p = Path(raw)
+    if p.is_absolute():
+        return p
+    return (BASE_DIR / p).resolve()
+
+
+LEDGER_PATH = _resolve_ledger_path()
 
 
 @dataclass
@@ -24,11 +43,17 @@ class LedgerResult:
 
 
 def _utc_now() -> str:
+    # Deterministic timestamp format (no microseconds, Z suffix)
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _canonical_json(obj: Any) -> str:
+    # Canonical JSON for determinism (stable hashing + stable on-disk format)
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
+
 def _stable_hash(payload: Dict[str, Any]) -> str:
-    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    blob = _canonical_json(payload).encode("utf-8")
     return hashlib.sha256(blob).hexdigest()
 
 
@@ -37,13 +62,14 @@ def _load_ledger() -> Dict[str, Any]:
         return {
             "schema_version": "0.1",
             "created_at_utc": _utc_now(),
-            "entries": []
+            "entries": [],
         }
     return json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
 
 
 def _save_ledger(ledger: Dict[str, Any]) -> None:
-    LEDGER_PATH.write_text(json.dumps(ledger, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # Canonical file content (single-line JSON + trailing newline)
+    LEDGER_PATH.write_text(_canonical_json(ledger) + "\n", encoding="utf-8")
 
 
 def last_entry_hash() -> str:
@@ -58,19 +84,20 @@ def append_entry(
     decision: Dict[str, Any],
     execution: Dict[str, Any],
     certificate: Dict[str, Any],
-    entry_id: str = "L8-SKELETON-001"
+    entry_id: str = "L8-SKELETON-001",
 ) -> LedgerResult:
     """
-    Skeleton append-only ledger:
+    Append-only ledger contract:
     - Loads JSON ledger file (creates if missing)
     - Appends a new entry with prev_hash and entry_hash
     - Saves back to disk
+    - Fail-closed: returns ok=False + error OR raises via callers upstream
     """
     try:
         ledger = _load_ledger()
         prev = last_entry_hash()
 
-        entry = {
+        entry: Dict[str, Any] = {
             "schema_version": "0.1",
             "entry_id": entry_id,
             "created_at_utc": _utc_now(),
@@ -79,6 +106,8 @@ def append_entry(
             "certificate": certificate,
             "prev_hash": prev,
         }
+
+        # Hash must be computed over the entry WITHOUT entry_hash included.
         entry["entry_hash"] = _stable_hash(entry)
 
         ledger.setdefault("entries", []).append(entry)

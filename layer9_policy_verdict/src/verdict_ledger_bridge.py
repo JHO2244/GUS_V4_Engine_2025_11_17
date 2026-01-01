@@ -32,7 +32,7 @@ def append_verdict_to_ledger(verdict: PolicyVerdict) -> Dict[str, Any]:
     }
 
     execution = {
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source_layer": "L9",
         "target_layer": "L8",
     }
