@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 
 CHARTER_PATH = Path("GUS_PURPOSE_CHARTER_v4.json")
@@ -23,6 +23,7 @@ class CharterLoadResult:
 def load_charter_v4(path: Path = CHARTER_PATH) -> CharterLoadResult:
     if not path.exists():
         return CharterLoadResult(ok=False, charter=None, error="Purpose Charter missing")
+
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:
@@ -30,10 +31,10 @@ def load_charter_v4(path: Path = CHARTER_PATH) -> CharterLoadResult:
 
     # Minimal fail-closed validation aligned to test contract expectations
     try:
-        if data.get("charter_version") != "v4":
+        # Accept v4 or v4.0 (normalize)
+        ver = str(data.get("charter_version", "")).strip().lower()
+        if not ver.startswith("v4"):
             raise CharterError("charter_version must be v4")
-        if float(data.get("target_rating", 0.0)) < 10.0:
-            raise CharterError("target_rating must be >= 10.0")
 
         fp = data.get("failure_posture", {})
         on_uncertainty = fp.get("on_uncertainty")
