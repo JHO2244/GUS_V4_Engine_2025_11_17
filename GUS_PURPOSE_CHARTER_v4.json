@@ -1,0 +1,107 @@
+{
+  "charter_version": "v4.0",
+  "charter_stage": "A1.1-draft",
+  "source": "The GUS Essence (10 Nov 2025)",
+  "guardian_rating_target": 10.0,
+
+  "core_purpose": {
+    "statement": "GUS exists to measure integrity, truth, and systemic alignment. It does not optimize outcomes, persuade actors, or execute actions.",
+    "non_negotiable": true
+  },
+
+  "foundational_constraints": {
+    "no_weaponization": {
+      "description": "GUS shall not be used, extended, or adapted to directly or indirectly enable coercion, domination, physical harm, psychological manipulation, or automated enforcement.",
+      "enforcement": [
+        "no_execution_layer",
+        "no_reward_optimization",
+        "no_autonomous_actuation"
+      ],
+      "testable": true
+    },
+
+    "human_sovereignty": {
+      "description": "All GUS outputs are advisory. Final authority and responsibility always remain with a human operator.",
+      "requirements": [
+        "verdicts_are_non_binding",
+        "explicit_human_ack_required",
+        "no_auto_execute_flag"
+      ],
+      "testable": true
+    },
+
+    "mandatory_auditability": {
+      "description": "Every verdict must be inspectable, traceable, and tamper-evident.",
+      "requirements": [
+        "hash_anchored_verdict",
+        "append_only_ledger_entry",
+        "epoch_reference_required"
+      ],
+      "testable": true
+    }
+  },
+
+  "measurement_axioms": {
+    "score_semantics": {
+      "range": [0.0, 10.0],
+      "type": "absolute",
+      "normalization": "forbidden"
+    },
+
+    "hard_fail_rules": {
+      "description": "Certain violations trigger immediate failure regardless of aggregate score.",
+      "examples": [
+        "audit_missing",
+        "policy_invalid",
+        "sovereignty_bypass_attempt"
+      ],
+      "averagable": false
+    },
+
+    "determinism": {
+      "description": "Identical inputs must always produce identical outputs.",
+      "requirements": [
+        "stable_hashing",
+        "pure_functions_only",
+        "no_time_entropy_in_scoring"
+      ]
+    }
+  },
+
+  "governance_requirements": {
+    "policy_first": {
+      "description": "All evaluations must be governed by explicit, versioned policy.",
+      "enforced_at": "L9"
+    },
+
+    "verdict_contract": {
+      "required_fields": [
+        "level",
+        "score",
+        "reasons",
+        "policy_id",
+        "epoch_ref",
+        "object_hash"
+      ]
+    }
+  },
+
+  "forbidden_capabilities": [
+    "autonomous_execution",
+    "behavioral_manipulation",
+    "hidden_scoring_logic",
+    "unverifiable_outputs",
+    "silent_mutation"
+  ],
+
+  "failure_posture": {
+    "principle": "Fail closed. Defer rather than guess.",
+    "on_uncertainty": "WARN",
+    "on_integrity_violation": "BLOCK"
+  },
+
+  "evolution_clause": {
+    "description": "This charter may evolve only through test-gated changes that preserve or increase Guardian rating.",
+    "minimum_rating_to_merge": 9.7
+  }
+}
