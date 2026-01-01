@@ -26,6 +26,12 @@ git rev-parse --show-toplevel >/dev/null 2>&1 || die "Not inside a git repo"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
+# Seal-gate (fail-closed): pytest must pass before any epoch tag/branch/seal is created
+echo "🧪 Seal-gate: pytest must pass before epoch lock."
+python -m pytest -q
+echo "✅ Seal-gate passed: proceeding to epoch lock."
+echo
+
 # Must be clean (staged + unstaged)
 if ! git diff --quiet || ! git diff --cached --quiet; then
   die "Working tree not clean. Commit/stash/reset first."

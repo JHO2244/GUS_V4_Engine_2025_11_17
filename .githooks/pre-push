@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🧪 pre-push: pytest must pass before push."
+python -m pytest -q
+echo "✅ pytest passed — push allowed"
