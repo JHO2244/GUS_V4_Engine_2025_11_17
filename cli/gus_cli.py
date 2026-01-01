@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+
+from utils.canonical_json import canonical_json_line
 from typing import Any, Dict, List, Optional
 
 

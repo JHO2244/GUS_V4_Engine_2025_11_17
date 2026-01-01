@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+
+from utils.canonical_json import canonical_json_bytes, canonical_json_line, canonical_dumps
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -53,7 +55,7 @@ def _canonical_json(obj: Any) -> str:
 
 
 def _stable_hash(payload: Dict[str, Any]) -> str:
-    blob = _canonical_json(payload).encode("utf-8")
+    blob = canonical_json_bytes(payload)
     return hashlib.sha256(blob).hexdigest()
 
 
