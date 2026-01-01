@@ -76,3 +76,10 @@ Any change to this contract requires:
 - PR reviewed and merged via the standard epoch/lock discipline
 
 If the contract doc is removed or its core guarantees are weakened, tests must fail.
+
+## Canonical JSON Output (Determinism Guarantee)
+All governance outputs that claim conformance to the authoritative interface MUST be emitted as canonical JSON:
+- json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+- Output MUST end with a single trailing newline ("\n")
+Rationale: stable hashes, portable diffs, and deterministic ledger verification across OS/environments.
+
