@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from utils.canonical_json import write_canonical_json_file, dumps_canonical
+
+from utils.canonical_json import write_canonical_json_file, canonical_dumps
+
 
 def test_canonical_writer_single_line_and_newline(tmp_path: Path) -> None:
     obj = {"b": 1, "a": {"z": 9, "y": 8}}
@@ -20,4 +22,4 @@ def test_canonical_writer_single_line_and_newline(tmp_path: Path) -> None:
     assert text.count("\n") == 1
 
     # must match canonical dumps + newline
-    assert text == dumps_canonical(obj) + "\n"
+    assert text == canonical_dumps(obj) + "\n"
