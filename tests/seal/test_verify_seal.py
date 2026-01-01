@@ -1,5 +1,6 @@
-import json
 import subprocess
+from utils.canonical_json import write_canonical_json_file
+
 from pathlib import Path
 
 import pytest
@@ -46,7 +47,8 @@ def test_verify_pass_at_commit(mini_repo: Path, tmp_path: Path):
         "lockfile_hashes": {"requirements.lock": lock_hash},
     }
     seal_path = tmp_path / "seal.json"
-    seal_path.write_text(json.dumps(seal, indent=2), encoding="utf-8")
+    write_canonical_json_file(seal_path, seal)
+
 
     res = verify_seal(repo_root=str(mini_repo), seal_path=str(seal_path), rev=commit, allow_dirty=False)
     assert res.ok is True
@@ -63,7 +65,8 @@ def test_verify_fail_on_lockfile_change_working(mini_repo: Path, tmp_path: Path)
         "lockfile_hashes": {"requirements.lock": lock_hash},
     }
     seal_path = tmp_path / "seal.json"
-    seal_path.write_text(json.dumps(seal, indent=2), encoding="utf-8")
+    write_canonical_json_file(seal_path, seal)
+
 
     (mini_repo / "requirements.lock").write_text("pkgA==9.9.9\n", encoding="utf-8")
 
