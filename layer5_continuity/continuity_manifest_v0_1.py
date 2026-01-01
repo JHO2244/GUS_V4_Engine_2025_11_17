@@ -26,6 +26,7 @@ Design goals:
 """
 
 from __future__ import annotations  # 👈 must be first, and only here
+from utils.canonical_json import write_canonical_json_file
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -141,8 +142,7 @@ def write_manifest(data: Dict[str, Any], path: Path | None = None) -> None:
     p = Path(path) if path is not None else MANIFEST_PATH
     p.parent.mkdir(parents=True, exist_ok=True)
 
-    with p.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, sort_keys=True)
+    write_canonical_json_file(p, data)
 
 
 def read_manifest(path: Path | None = None) -> Dict[str, Any]:
