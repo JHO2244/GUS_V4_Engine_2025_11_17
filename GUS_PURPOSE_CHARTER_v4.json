@@ -3,6 +3,7 @@
   "charter_stage": "A1.1-draft",
   "source": "The GUS Essence (10 Nov 2025)",
   "guardian_rating_target": 10.0,
+  "target_rating": 10.0,
 
   "core_purpose": {
     "statement": "GUS exists to measure integrity, truth, and systemic alignment. It does not optimize outcomes, persuade actors, or execute actions.",
@@ -102,6 +103,6 @@
 
   "evolution_clause": {
     "description": "This charter may evolve only through test-gated changes that preserve or increase Guardian rating.",
-    "minimum_rating_to_merge": 9.7
+    "minimum_rating_to_merge": 10
   }
 }

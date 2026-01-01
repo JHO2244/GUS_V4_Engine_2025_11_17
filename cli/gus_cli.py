@@ -2,37 +2,37 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import sys
-from typing import Any, Dict
-
-from layer9_policy_verdict.src.governance_api import govern_action
+from typing import Any, Dict, List, Optional
 
 
 def _loads_json(s: str) -> Dict[str, Any]:
     try:
         obj = json.loads(s)
-        if not isinstance(obj, dict):
-            raise ValueError("JSON must be an object/dict.")
-        return obj
     except Exception as e:
         raise SystemExit(f"Invalid JSON: {e}")
+    if not isinstance(obj, dict):
+        raise SystemExit("JSON must be an object (dict).")
+    return obj
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="gus_cli", description="GUS v4 Operator CLI (v1)")
+    p = argparse.ArgumentParser(prog="gus", description="GUS Operator CLI")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    g = sub.add_parser("govern", help="Evaluate action+context under a policy and append verdict to L8 ledger")
-    g.add_argument("--policy", required=True, help="Policy filename (e.g. L9_MERGE_MAIN.json)")
-    g.add_argument("--epoch", required=True, help="Epoch reference (e.g. epoch_..._anchor_main)")
-    g.add_argument("--head", required=True, help="Chain head hash (e.g. L8 chain head)")
-    g.add_argument("--action", required=True, help='Action JSON object (e.g. \'{"type":"merge_pr","target":"main"}\')')
-    g.add_argument("--context", required=True, help='Context JSON object (e.g. \'{"actor":"JHO","checks":"green"}\')')
+    g = sub.add_parser("govern", help="Policy → Verdict → Ledger (fail-closed)")
+    g.add_argument("--policy", required=True, help="Policy filename in layer9_policy_verdict/policies/")
+    g.add_argument("--epoch", required=True, help="Epoch reference string")
+    g.add_argument("--head", required=True, help="Chain head hash/string")
+    g.add_argument("--action", required=True, help='JSON object, e.g. \'{"type":"merge_pr","target":"main"}\'')
+    g.add_argument("--context", required=True, help='JSON object, e.g. \'{"actor":"JHO","checks":"green"}\'')
+
     return p
 
 
 def cmd_govern(args: argparse.Namespace) -> int:
+    # Import here to keep CLI import-light and avoid circulars during test collection
+    from layer9_policy_verdict.src.governance_api import govern_action
+
     action = _loads_json(args.action)
     context = _loads_json(args.context)
 
@@ -44,20 +44,11 @@ def cmd_govern(args: argparse.Namespace) -> int:
         chain_head=args.head,
     )
 
-    # Print compact JSON (stable keys)
-    payload = {
-        "ok": out["ok"],
-        "level": out["level"],
-        "score": out["score"],
-        "ledger_hash": out["ledger_hash"],
-        "policy_id": out["verdict"].policy_id,
-        "object_hash": out["verdict"].object_hash,
-    }
-    print(json.dumps(payload, ensure_ascii=False))
+    print(json.dumps(out, indent=2, ensure_ascii=False, sort_keys=True))
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
