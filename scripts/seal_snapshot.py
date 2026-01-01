@@ -1,8 +1,8 @@
 # scripts/seal_snapshot.py
 from __future__ import annotations
+from utils.canonical_json import write_canonical_json_file
 
 import hashlib
-import json
 import os
 import platform
 import subprocess
@@ -92,7 +92,8 @@ def main() -> int:
 
     # filename includes commit prefix
     out_path = OUT_DIR / f"seal_{commit[:12]}_{now_utc.replace(':','').replace('-','')}.json"
-    out_path.write_text(json.dumps(snapshot, indent=2, sort_keys=True), encoding="utf-8")
+    write_canonical_json_file(out_path, snapshot)
+
 
     print(f"OK: wrote {out_path.as_posix()}")
     return 0
