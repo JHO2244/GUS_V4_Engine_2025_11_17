@@ -46,7 +46,7 @@ def cmd_govern(args: argparse.Namespace) -> int:
         chain_head=args.head,
     )
 
-    print(json.dumps(out, indent=2, ensure_ascii=False, sort_keys=True))
+    print(canonical_json_line(out), end='')
     return 0
 
 
