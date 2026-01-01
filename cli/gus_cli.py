@@ -1,4 +1,5 @@
 from __future__ import annotations
+from gus_purpose_charter_gate import require_charter_v4
 
 import argparse
 import json
@@ -35,6 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
 def cmd_govern(args: argparse.Namespace) -> int:
     action = _loads_json(args.action)
     context = _loads_json(args.context)
+
+    require_charter_v4()  # fail-closed if charter missing/invalid
 
     out = govern_action(
         action=action,

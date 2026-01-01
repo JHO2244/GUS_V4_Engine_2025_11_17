@@ -1,4 +1,5 @@
 from __future__ import annotations
+from gus_purpose_charter_gate import require_charter_v4
 
 from typing import Any, Dict
 
@@ -15,6 +16,7 @@ def govern_action(
     policy_filename: str,
     epoch_ref: str,
     chain_head: str
+
 ) -> Dict[str, Any]:
     """
     Stable governance entrypoint (v1).
@@ -25,6 +27,7 @@ def govern_action(
     4) Return compact response
     """
     policy = load_policy(policy_filename)
+    require_charter_v4()  # fail-closed if charter missing/invalid
 
     verdict: PolicyVerdict = evaluate_policy(
         action=action,
