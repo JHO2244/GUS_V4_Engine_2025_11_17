@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+from utils.canonical_json import write_canonical_json_file
 
 """
 GUS v4 - Anchor Verify (CI Spine v0.2)
@@ -18,7 +19,6 @@ Default behavior:
 """
 
 import argparse
-import json
 import os
 import subprocess
 import sys
@@ -76,8 +76,7 @@ def default_attestation_path() -> Path:
 
 
 def write_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    write_canonical_json_file(path, payload)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
