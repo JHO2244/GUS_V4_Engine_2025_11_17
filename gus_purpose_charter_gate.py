@@ -29,25 +29,27 @@ def load_charter_v4(path: Path = CHARTER_PATH) -> CharterLoadResult:
     except Exception as e:
         return CharterLoadResult(ok=False, charter=None, error=f"Purpose Charter unreadable: {e}")
 
-    # Minimal fail-closed validation aligned to test contract expectations
+    # Fail-closed validation aligned to contract expectations (R2-B hardened)
     try:
-        # Accept v4 or v4.0 (normalize)
+        if not isinstance(data, dict):
+            raise CharterError("Purpose Charter root must be a JSON object")
+
+        # Accept v4 or v4.x (normalize)
         ver = str(data.get("charter_version", "")).strip().lower()
         if not ver.startswith("v4"):
-            raise CharterError("charter_version must be v4")
+            raise CharterError("charter_version must start with v4 (e.g., v4 or v4.0)")
 
-        fp = data.get("failure_posture", {})
+        fp = data.get("failure_posture")
+        if not isinstance(fp, dict):
+            raise CharterError("failure_posture must be an object")
+
         on_uncertainty = fp.get("on_uncertainty")
+        if not isinstance(on_uncertainty, str):
+            raise CharterError("failure_posture.on_uncertainty must be a string: WARN or BLOCK")
+
+        on_uncertainty = on_uncertainty.strip().upper()
         if on_uncertainty not in ("WARN", "BLOCK"):
             raise CharterError("failure_posture.on_uncertainty must be WARN or BLOCK")
+
     except Exception as e:
         return CharterLoadResult(ok=False, charter=None, error=str(e))
-
-    return CharterLoadResult(ok=True, charter=data, error=None)
-
-
-def require_charter_v4() -> Dict[str, Any]:
-    r = load_charter_v4()
-    if not r.ok or r.charter is None:
-        raise CharterError(r.error or "Purpose Charter invalid")
-    return r.charter
