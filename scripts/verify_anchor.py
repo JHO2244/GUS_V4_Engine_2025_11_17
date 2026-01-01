@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from pathlib import Path
 from __future__ import annotations
-from utils.canonical_json import write_canonical_json_file
 
 """
 GUS v4 - Anchor Verify (CI Spine v0.2)
@@ -23,21 +21,21 @@ import argparse
 import os
 import subprocess
 import sys
-# Ensure repo root is importable even when running as a script (python scripts/verify_anchor.py)
-REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT_FOR_IMPORT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT_FOR_IMPORT))
-
 import tempfile
-# Ensure repo root is importable even when running as a script (python scripts/verify_anchor.py)
-REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT_FOR_IMPORT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT_FOR_IMPORT))
-
-
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+
+# Bootstrap import path so "utils" is importable whether run as:
+#   python -m scripts.verify_anchor
+# or
+#   python scripts/verify_anchor.py
+REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT_FOR_IMPORT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT_FOR_IMPORT))
+
+from utils.canonical_json import write_canonical_json_file  # noqa: E402
 
 
 def run_capture(cmd: list[str]) -> str:
@@ -47,22 +45,28 @@ def run_capture(cmd: list[str]) -> str:
 
 def find_latest_anchor_tag(tag_pattern: str) -> str:
     # Prefer annotated tags by taggerdate; fallback to creatordate
-    tags = run_capture([
-        "git", "for-each-ref",
-        "--sort=-taggerdate",
-        "--format=%(refname:short)",
-        f"refs/tags/{tag_pattern}",
-    ]).splitlines()
+    tags = run_capture(
+        [
+            "git",
+            "for-each-ref",
+            "--sort=-taggerdate",
+            "--format=%(refname:short)",
+            f"refs/tags/{tag_pattern}",
+        ]
+    ).splitlines()
     tags = [t.strip() for t in tags if t.strip()]
     if tags:
         return tags[0]
 
-    tags = run_capture([
-        "git", "for-each-ref",
-        "--sort=-creatordate",
-        "--format=%(refname:short)",
-        f"refs/tags/{tag_pattern}",
-    ]).splitlines()
+    tags = run_capture(
+        [
+            "git",
+            "for-each-ref",
+            "--sort=-creatordate",
+            "--format=%(refname:short)",
+            f"refs/tags/{tag_pattern}",
+        ]
+    ).splitlines()
     tags = [t.strip() for t in tags if t.strip()]
     if not tags:
         raise SystemExit(f"[FAIL] No tags found matching pattern: {tag_pattern}")
@@ -81,7 +85,7 @@ def default_attestation_path() -> Path:
     # Always write OUTSIDE the repo by default.
     # CI: RUNNER_TEMP; Local: system temp
     if os.environ.get("GITHUB_ACTIONS") == "true":
-        base = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "gus_artifacts"
+        base = Path(os.environ.get("RUNNER_TEMP", str(Path(tempfile.gettempdir())))) / "gus_artifacts"
     else:
         base = Path(tempfile.gettempdir()) / "gus_artifacts"
     return base / "anchor_attestation.json"
@@ -113,11 +117,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     # CRITICAL RULE: never detach/checkout here.
     # Seal files for older commits are stored in newer history. Detaching would hide them.
 
-    # Verify that the seal JSON exists for the anchor SHA (content-only is enough for CI,
-    # because .sig is not committed by design).
     cmd = [
-        sys.executable, "-m", "scripts.verify_repo_seals",
-        "--sha", anchor_sha12,
+        sys.executable,
+        "-m",
+        "scripts.verify_repo_seals",
+        "--sha",
+        anchor_sha12,
         "--no-sig",
         "--sig-strict",
         "--ci",
