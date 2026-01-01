@@ -51,7 +51,7 @@ def _utc_now() -> str:
 
 def _canonical_json(obj: Any) -> str:
     # Canonical JSON for determinism (stable hashing + stable on-disk format)
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return canonical_dumps(obj)
 
 
 def _stable_hash(payload: Dict[str, Any]) -> str:

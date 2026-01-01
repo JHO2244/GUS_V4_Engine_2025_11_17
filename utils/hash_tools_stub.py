@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Dict
 import json
 
+from utils.canonical_json import canonical_json_bytes
+
 
 def compute_sha256(text: str) -> str:
     """Return the hex SHA-256 of the given text."""
@@ -31,5 +33,5 @@ def compute_file_sha256(path: Path) -> str:
 
 def hash_payload(payload: Dict[str, Any]) -> str:
     """Stable hash for dict-like payloads (sorted keys)."""
-    data = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    data = canonical_json_bytes(payload).decode('utf-8')
     return compute_sha256(data)

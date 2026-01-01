@@ -3,13 +3,15 @@ from layer9_policy_verdict.src.ruleset import apply_ruleset_v1, score_from_polic
 
 import hashlib
 import json
+
+from utils.canonical_json import canonical_json_bytes
 from typing import Any, Dict, List, Optional
 
 from .verdict_types import PolicyVerdict, VerdictLevel
 from .policy_schema import require_policy_v1
 
 def _stable_hash(obj: Dict[str, Any]) -> str:
-    blob = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    blob = canonical_json_bytes(obj)
     return hashlib.sha256(blob).hexdigest()
 
 def evaluate_policy(
