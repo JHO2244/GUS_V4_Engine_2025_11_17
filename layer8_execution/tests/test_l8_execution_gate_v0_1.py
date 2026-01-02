@@ -14,24 +14,24 @@ def _decision(verdict="ALLOW", action="NOOP", params=None, decision_hash="abc123
 def test_allow_noop_success_deterministic():
     rt = ExecutionRuntimeV0_1()
     d = _decision(verdict="ALLOW", action="NOOP", decision_hash="H1")
-    r1 = rt.execute(d)
-    r2 = rt.execute(d)
-    assert r1.status == "SUCCESS"
-    assert r1.execution_hash == r2.execution_hash  # determinism
+    rec1 = rt.execute(d)
+    rec2 = rt.execute(d)
+    assert rec1.result.status == "SUCCESS"
+    assert rec1.record_hash == rec2.record_hash  # determinism
 
 
 def test_non_allow_blocks():
     rt = ExecutionRuntimeV0_1()
     d = _decision(verdict="DENY", action="NOOP", decision_hash="H2")
-    r = rt.execute(d)
-    assert r.status == "BLOCKED"
+    rec = rt.execute(d)
+    assert rec.result.status == "BLOCKED"
 
 
 def test_unknown_action_blocks():
     rt = ExecutionRuntimeV0_1()
     d = _decision(verdict="ALLOW", action="DO_SOMETHING", decision_hash="H3")
-    r = rt.execute(d)
-    assert r.status == "BLOCKED"
+    rec = rt.execute(d)
+    assert rec.result.status == "BLOCKED"
 
 
 def test_missing_fields_fail_hard():
