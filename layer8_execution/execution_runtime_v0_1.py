@@ -107,17 +107,20 @@ class ExecutionRuntimeV0_1:
         if req.authorized_action != "NOOP":
             return self._record(req, status="BLOCKED", note="Only NOOP permitted in v0.1", side_effect_events=())
 
-        # L8-4: declared channels enforced by bus (NOOP declares none)
+        # L8-4/L8-6: declared channels enforced by registry+bus. Fail-closed on invalid registry metadata.
         run_id = _hash_str(_stable_json({"decision_id": req.decision_id, "decision_hash": req.decision_hash}))
-        bus = SideEffectBus(
-            declared_channels=get_declared_side_effect_channels(req.authorized_action),
-            clock_utc=self._clock_utc,
-            action_id=req.authorized_action,
-            run_id=run_id,
-        )
-
-        # NOOP executes: no emissions expected.
-        side_effect_events = _events_to_wire(bus.snapshot())
+        try:
+            declared = get_declared_side_effect_channels(req.authorized_action)
+            bus = SideEffectBus(
+                declared_channels=declared,
+                clock_utc=self._clock_utc,
+                action_id=req.authorized_action,
+                run_id=run_id,
+            )
+            # NOOP executes: no emissions expected.
+            side_effect_events = _events_to_wire(bus.snapshot())
+        except ValueError:
+            return self._record(req, status="BLOCKED", note="Registry metadata invalid", side_effect_events=())
 
         return self._record(req, status="SUCCESS", note="NOOP executed", side_effect_events=side_effect_events)
 
