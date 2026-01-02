@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 import json
 
+from utils.canonical_json import write_canonical_json_file
+
 from layer5_continuity.continuity_manifest_v0_1 import (
     ContinuityStatus,
     load_continuity_status,
@@ -50,10 +52,12 @@ def read_manifest(path: Optional[Path] = None) -> Dict[str, Any]:
 
 
 def write_manifest(data: Dict[str, Any], path: Optional[Path] = None) -> None:
+    """
+    Write the manifest using the canonical JSON writer (R4 determinism rule).
+    """
     target = _resolve_path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, sort_keys=True)
+    write_canonical_json_file(target, data)
 
 
 # ---------------------------------------------------------------------------
@@ -154,19 +158,6 @@ def build_replication_plan_from_continuity(
 
     tests_pas_014 only asserts that the return type is `dict`, but we provide
     a clean, structured payload for future use.
-
-    Shape:
-
-        {
-            "continuity_status": "ok" | "error" | "manifest_missing" | ...,
-            "continuity_ok": bool,
-            "continuity_reason": str,
-            "targets": [...],
-            "frequency": "on_demand",
-            "require_all_green": True,
-            "max_snapshots": 7,
-            "manifest": {...},   # full L6 manifest
-        }
     """
     continuity_status: ContinuityStatus = load_continuity_status()
     manifest = load_manifest()
