@@ -2,13 +2,10 @@
 GUS v4.0 — L8 Execution Layer
 Execution Record Models v0.1
 
-Goal:
-- Deterministic execution outputs (no side effects).
-- Minimal structures to support the L8-2 Authorization Gate tests.
-
-Notes:
-- timestamp_utc is deterministic by default (fixed epoch string).
-- execution_hash is derived deterministically from decision_hash + status + action.
+L8-3 Upgrade:
+- ExecutionRecord MUST include record_hash.
+- record_hash is deterministic and covers:
+  execution_id, decision_hash, result fields, audit_trace.
 """
 
 from __future__ import annotations
@@ -43,4 +40,6 @@ class ExecutionRecord:
     decision_hash: str
     result: ExecutionResult
     audit_trace: Mapping[str, Any]
+    record_hash: str
+
 
