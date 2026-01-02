@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 import json
 
 from utils.canonical_json import write_canonical_json_file
-from layer7_measurement.measurement_manifest_v0_1 import load_manifest
+from layer7_measurement.measurement_manifest_v0_1 import load_manifest, AUTO_WRITE_DEFAULT
 
 # Tests may monkeypatch this
 SCORE_REPORT_PATH = Path("layer7_measurement") / "score_report_v0_1.json"
@@ -100,7 +100,7 @@ def compute_composite_score(scores: Dict[str, Any], *, manifest: Optional[Dict[s
     - per_dimension: fixed 4dp strings
     - weights: fixed 4dp strings
     """
-    m = manifest or load_manifest()
+    m = manifest or load_manifest(auto_write=False)
     measurement = (m.get("measurement", {}) or {})
     dims = list(measurement.get("dimensions") or _DIMENSIONS_DEFAULT)
 

@@ -10,11 +10,13 @@ from utils.canonical_json import write_canonical_json_file
 # Tests may monkeypatch this
 MANIFEST_PATH = Path("layer7_measurement") / "measurement_manifest_v0_1.json"
 
+# Strict mode default: DO NOT write to repo unless explicitly requested
+AUTO_WRITE_DEFAULT = False
+
 
 def _resolve_path(path: Optional[Path]) -> Path:
     return path or MANIFEST_PATH
 
-AUTO_WRITE_DEFAULT = False  # Strict mode: never write defaults unless explicitly requested
 
 def read_manifest(path: Optional[Path] = None) -> Dict[str, Any]:
     target = _resolve_path(path)
@@ -30,21 +32,14 @@ def write_manifest(data: Dict[str, Any], path: Optional[Path] = None) -> None:
     write_canonical_json_file(target, data)
 
 
-def create_default_manifest(path: Optional[Path] = None) -> Dict[str, Any]:
+def _default_manifest_dict() -> Dict[str, Any]:
     """
-    A1 Strict 10/10 requirements:
-    - Deterministic (no timestamps, no random IDs, no env-dependent fields)
-    - Canonical JSON writer
-    - Explicit upgrade hooks for A2 (score aggregator) without implementing A2
+    Pure in-memory default manifest dict. NO file I/O.
     """
-    target = _resolve_path(path)
-
-    manifest: Dict[str, Any] = {
+    return {
         "version": "0.1",
         "schema": "gus_v4_measurement_manifest",
         "description": "GUS v4 – A1 Measurement Manifest (Strict Deterministic v0.1).",
-
-        # A1 core contract: what gets measured, at what granularity
         "measurement": {
             "mode": "strict",
             "units": "score_out_of_10",
@@ -56,8 +51,6 @@ def create_default_manifest(path: Optional[Path] = None) -> Dict[str, Any]:
                 "resonance_longevity": "RL",
             },
         },
-
-        # Upgrade hook for A2: aggregator will consume these fields later
         "aggregation": {
             "enabled": False,
             "strategy": "placeholder_for_A2",
@@ -69,32 +62,33 @@ def create_default_manifest(path: Optional[Path] = None) -> Dict[str, Any]:
                 "resonance_longevity": 0.25,
             },
         },
-
-        # Deterministic invariants for A1:
         "invariants": {
             "no_entropy_fields": True,
             "no_timestamps": True,
             "canonical_json": True,
             "stable_key_order": True,
         },
-
-        # Upgrade path marker (document-only)
         "upgrade_path": {
             "next": "A2_score_aggregator",
-            "notes": "A2 will implement aggregation.enabled=True and compute composite_score deterministically.",
+            "notes": "A2 computes composite_score deterministically; enable aggregation there if desired.",
         },
     }
 
+
+def create_default_manifest(path: Optional[Path] = None) -> Dict[str, Any]:
+    """
+    Explicit writer: creates and WRITES the canonical default to disk.
+    Only call this when you truly want a file on disk.
+    """
+    target = _resolve_path(path)
+    manifest = _default_manifest_dict()
     write_manifest(manifest, target)
     return manifest
 
 
 def _normalize_manifest(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Normalize minimal fields to keep tests stable and upgrades safe.
-    """
     if not data:
-        return create_default_manifest()
+        data = _default_manifest_dict()
 
     data.setdefault("version", "0.1")
     data.setdefault("schema", "gus_v4_measurement_manifest")
@@ -138,64 +132,22 @@ def _normalize_manifest(data: Dict[str, Any]) -> Dict[str, Any]:
 
 def load_manifest(path: Optional[Path] = None, *, auto_write: bool = AUTO_WRITE_DEFAULT) -> Dict[str, Any]:
     """
-    Always returns a normalized manifest dict.
+    Strict default: SIDE-EFFECT FREE.
 
-    Strict determinism rule:
-    - Default behavior MUST be side-effect free (no file writes).
-    - If the manifest file is missing, we return the default manifest in-memory.
-    - Only write to disk when auto_write=True (explicit).
+    - If missing: return in-memory default (normalized).
+    - Only writes if auto_write=True explicitly.
     """
     target = _resolve_path(path)
     raw = read_manifest(target)
 
     if not raw:
-        default = create_default_manifest(path=target) if auto_write else create_default_manifest(path=target)
-        # IMPORTANT: create_default_manifest writes, so we must avoid calling it when auto_write is False.
         if auto_write:
             return create_default_manifest(path=target)
-        return _normalize_manifest({
-            "version": "0.1",
-            "schema": "gus_v4_measurement_manifest",
-            "description": "GUS v4 – A1 Measurement Manifest (Strict Deterministic v0.1).",
-            "measurement": {
-                "mode": "strict",
-                "units": "score_out_of_10",
-                "dimensions": ["truth_density", "activation_potential", "systemic_coherence", "resonance_longevity"],
-                "dimension_aliases": {
-                    "truth_density": "TD",
-                    "activation_potential": "AP",
-                    "systemic_coherence": "SC",
-                    "resonance_longevity": "RL",
-                },
-            },
-            "aggregation": {
-                "enabled": False,
-                "strategy": "placeholder_for_A2",
-                "composite_field": "composite_score",
-                "weights": {
-                    "truth_density": 0.25,
-                    "activation_potential": 0.25,
-                    "systemic_coherence": 0.25,
-                    "resonance_longevity": 0.25,
-                },
-            },
-            "invariants": {
-                "no_entropy_fields": True,
-                "no_timestamps": True,
-                "canonical_json": True,
-                "stable_key_order": True,
-            },
-            "upgrade_path": {
-                "next": "A2_score_aggregator",
-                "notes": "A2 will implement aggregation.enabled=True and compute composite_score deterministically.",
-            },
-        })
+        return _normalize_manifest(_default_manifest_dict())
 
     return _normalize_manifest(raw)
 
 
-
-# Optional typed view (non-essential, but helpful for future layers)
 @dataclass(frozen=True)
 class MeasurementManifest:
     raw: Dict[str, Any]
@@ -211,4 +163,3 @@ class MeasurementManifest:
 
 def load_manifest_typed(path: Optional[Path] = None) -> MeasurementManifest:
     return MeasurementManifest(load_manifest(path))
-
