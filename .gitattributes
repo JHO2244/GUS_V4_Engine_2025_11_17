@@ -1,3 +1,2 @@
-# GUS audit artifacts must be byte-exact (no CRLF/LF normalization)
-seals/*.json -text
-seals/*.sig  -text
+* text=auto eol=lf
+*.py text eol=lf
