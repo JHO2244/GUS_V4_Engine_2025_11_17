@@ -1,4 +1,4 @@
-"""
+""""
 GUS v4.0 — L8 Execution Layer
 Execution Runtime v0.1
 
@@ -9,20 +9,29 @@ L8-3 Upgrade:
 - execute() MUST return ExecutionRecord (never ExecutionResult).
 - record_hash MUST be deterministic and cover:
   execution_id, decision_hash, result fields, audit_trace.
+
+L8-4 Upgrade:
+- Side effects MUST be declared IO only (SideEffectBus).
+- ExecutionRecord MUST include side_effect_events.
+- record_hash MUST cover side_effect_events.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Mapping, Callable
+from typing import Any, Mapping, Callable, Tuple
 
-from layer8_execution.action_registry_v0_1 import is_action_allowed
+from layer8_execution.action_registry_v0_1 import (
+    is_action_allowed,
+    get_declared_side_effect_channels,
+)
 from layer8_execution.execution_record_v0_1 import (
     ExecutionRequest,
     ExecutionResult,
     ExecutionRecord,
 )
+from layer8_execution.side_effects_v0_1 import SideEffectBus
 
 
 _FIXED_TIMESTAMP_UTC = "1970-01-01T00:00:00Z"
@@ -34,6 +43,23 @@ def _stable_json(data: Mapping[str, Any]) -> str:
 
 def _hash_str(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def _events_to_wire(events: Tuple[Any, ...]) -> Tuple[Mapping[str, Any], ...]:
+    out: list[Mapping[str, Any]] = []
+    for ev in events:
+        # SideEffectEvent is a dataclass; access attributes explicitly.
+        out.append(
+            {
+                "seq": int(getattr(ev, "seq")),
+                "timestamp_utc": str(getattr(ev, "timestamp_utc")),
+                "channel": str(getattr(ev, "channel")),
+                "payload": dict(getattr(ev, "payload")),
+                "action_id": str(getattr(ev, "action_id")),
+                "run_id": str(getattr(ev, "run_id")),
+            }
+        )
+    return tuple(out)
 
 
 class ExecutionRuntimeV0_1:
@@ -71,29 +97,52 @@ class ExecutionRuntimeV0_1:
 
         # Gate 1: verdict must be ALLOW
         if req.verdict != "ALLOW":
-            return self._record(req, status="BLOCKED", note="Verdict not ALLOW")
+            return self._record(req, status="BLOCKED", note="Verdict not ALLOW", side_effect_events=())
 
         # Gate 2: action must be allow-listed
         if not is_action_allowed(req.authorized_action):
-            return self._record(req, status="BLOCKED", note="Action not in registry")
+            return self._record(req, status="BLOCKED", note="Action not in registry", side_effect_events=())
 
-        # v0.1: NOOP only, no side effects
+        # v0.1: NOOP only
         if req.authorized_action != "NOOP":
-            return self._record(req, status="BLOCKED", note="Only NOOP permitted in v0.1")
+            return self._record(req, status="BLOCKED", note="Only NOOP permitted in v0.1", side_effect_events=())
 
-        # Deterministic SUCCESS for NOOP
-        return self._record(req, status="SUCCESS", note="NOOP executed")
+        # L8-4: declared channels enforced by bus (NOOP declares none)
+        run_id = _hash_str(_stable_json({"decision_id": req.decision_id, "decision_hash": req.decision_hash}))
+        bus = SideEffectBus(
+            declared_channels=get_declared_side_effect_channels(req.authorized_action),
+            clock_utc=self._clock_utc,
+            action_id=req.authorized_action,
+            run_id=run_id,
+        )
 
-    def _record(self, req: ExecutionRequest, status: str, note: str) -> ExecutionRecord:
+        # NOOP executes: no emissions expected.
+        side_effect_events = _events_to_wire(bus.snapshot())
+
+        return self._record(req, status="SUCCESS", note="NOOP executed", side_effect_events=side_effect_events)
+
+    def _record(
+        self,
+        req: ExecutionRequest,
+        *,
+        status: str,
+        note: str,
+        side_effect_events: Tuple[Mapping[str, Any], ...],
+    ) -> ExecutionRecord:
         ts = self._clock_utc()
 
-        execution_hash = _hash_str(_stable_json({
-            "decision_hash": req.decision_hash,
-            "status": status,
-            "action": req.authorized_action,
-            "timestamp_utc": ts,
-            "note": note,
-        }))
+        execution_hash = _hash_str(
+            _stable_json(
+                {
+                    "decision_hash": req.decision_hash,
+                    "status": status,
+                    "action": req.authorized_action,
+                    "timestamp_utc": ts,
+                    "note": note,
+                    "side_effect_events": side_effect_events,
+                }
+            )
+        )
 
         result = ExecutionResult(
             status=status,  # type: ignore[arg-type]
@@ -102,10 +151,7 @@ class ExecutionRuntimeV0_1:
             note=note,
         )
 
-        execution_id = _hash_str(_stable_json({
-            "decision_id": req.decision_id,
-            "execution_hash": execution_hash,
-        }))
+        execution_id = _hash_str(_stable_json({"decision_id": req.decision_id, "execution_hash": execution_hash}))
 
         audit_trace = {
             "gate_version": "0.1",
@@ -115,24 +161,31 @@ class ExecutionRuntimeV0_1:
             "verdict": req.verdict,
             "status": result.status,
             "note": result.note,
+            "side_effect_count": len(side_effect_events),
         }
 
-        record_hash = _hash_str(_stable_json({
-            "execution_id": execution_id,
-            "decision_hash": req.decision_hash,
-            "result": {
-                "status": result.status,
-                "timestamp_utc": result.timestamp_utc,
-                "execution_hash": result.execution_hash,
-                "note": result.note,
-            },
-            "audit_trace": audit_trace,
-        }))
+        record_hash = _hash_str(
+            _stable_json(
+                {
+                    "execution_id": execution_id,
+                    "decision_hash": req.decision_hash,
+                    "result": {
+                        "status": result.status,
+                        "timestamp_utc": result.timestamp_utc,
+                        "execution_hash": result.execution_hash,
+                        "note": result.note,
+                    },
+                    "audit_trace": audit_trace,
+                    "side_effect_events": side_effect_events,
+                }
+            )
+        )
 
         return ExecutionRecord(
             execution_id=execution_id,
             decision_hash=req.decision_hash,
             result=result,
             audit_trace=audit_trace,
+            side_effect_events=side_effect_events,
             record_hash=record_hash,
         )

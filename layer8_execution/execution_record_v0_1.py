@@ -6,12 +6,16 @@ L8-3 Upgrade:
 - ExecutionRecord MUST include record_hash.
 - record_hash is deterministic and covers:
   execution_id, decision_hash, result fields, audit_trace.
+
+L8-4 Upgrade:
+- ExecutionRecord MUST include side_effect_events (declared IO only).
+- record_hash MUST cover side_effect_events.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping, Literal
+from typing import Any, Mapping, Literal, Tuple
 
 
 Status = Literal["SUCCESS", "FAILURE", "BLOCKED"]
@@ -40,6 +44,5 @@ class ExecutionRecord:
     decision_hash: str
     result: ExecutionResult
     audit_trace: Mapping[str, Any]
+    side_effect_events: Tuple[Mapping[str, Any], ...]
     record_hash: str
-
-
