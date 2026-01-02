@@ -14,6 +14,7 @@ MANIFEST_PATH = Path("layer7_measurement") / "measurement_manifest_v0_1.json"
 def _resolve_path(path: Optional[Path]) -> Path:
     return path or MANIFEST_PATH
 
+AUTO_WRITE_DEFAULT = False  # Strict mode: never write defaults unless explicitly requested
 
 def read_manifest(path: Optional[Path] = None) -> Dict[str, Any]:
     target = _resolve_path(path)
@@ -135,16 +136,63 @@ def _normalize_manifest(data: Dict[str, Any]) -> Dict[str, Any]:
     return data
 
 
-def load_manifest(path: Optional[Path] = None) -> Dict[str, Any]:
+def load_manifest(path: Optional[Path] = None, *, auto_write: bool = AUTO_WRITE_DEFAULT) -> Dict[str, Any]:
     """
     Always returns a normalized manifest dict.
-    If missing, creates deterministic default and writes canonically.
+
+    Strict determinism rule:
+    - Default behavior MUST be side-effect free (no file writes).
+    - If the manifest file is missing, we return the default manifest in-memory.
+    - Only write to disk when auto_write=True (explicit).
     """
     target = _resolve_path(path)
     raw = read_manifest(target)
+
     if not raw:
-        return create_default_manifest(path=target)
+        default = create_default_manifest(path=target) if auto_write else create_default_manifest(path=target)
+        # IMPORTANT: create_default_manifest writes, so we must avoid calling it when auto_write is False.
+        if auto_write:
+            return create_default_manifest(path=target)
+        return _normalize_manifest({
+            "version": "0.1",
+            "schema": "gus_v4_measurement_manifest",
+            "description": "GUS v4 – A1 Measurement Manifest (Strict Deterministic v0.1).",
+            "measurement": {
+                "mode": "strict",
+                "units": "score_out_of_10",
+                "dimensions": ["truth_density", "activation_potential", "systemic_coherence", "resonance_longevity"],
+                "dimension_aliases": {
+                    "truth_density": "TD",
+                    "activation_potential": "AP",
+                    "systemic_coherence": "SC",
+                    "resonance_longevity": "RL",
+                },
+            },
+            "aggregation": {
+                "enabled": False,
+                "strategy": "placeholder_for_A2",
+                "composite_field": "composite_score",
+                "weights": {
+                    "truth_density": 0.25,
+                    "activation_potential": 0.25,
+                    "systemic_coherence": 0.25,
+                    "resonance_longevity": 0.25,
+                },
+            },
+            "invariants": {
+                "no_entropy_fields": True,
+                "no_timestamps": True,
+                "canonical_json": True,
+                "stable_key_order": True,
+            },
+            "upgrade_path": {
+                "next": "A2_score_aggregator",
+                "notes": "A2 will implement aggregation.enabled=True and compute composite_score deterministically.",
+            },
+        })
+
     return _normalize_manifest(raw)
+
 
 
 # Optional typed view (non-essential, but helpful for future layers)
@@ -163,3 +211,4 @@ class MeasurementManifest:
 
 def load_manifest_typed(path: Optional[Path] = None) -> MeasurementManifest:
     return MeasurementManifest(load_manifest(path))
+
