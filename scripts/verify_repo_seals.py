@@ -41,6 +41,15 @@ def git_porcelain() -> list[str]:
     out = sh(["git", "status", "--porcelain"])
     return [ln for ln in out.splitlines() if ln.strip()]
 
+def head_is_seal_only_commit() -> bool:
+    # True if HEAD changes only seals/ files (including .sig) and nothing else.
+    out = sh(["git", "show", "--name-only", "--pretty=format:", "HEAD"])
+    files = [ln.strip().replace("\\", "/") for ln in out.splitlines() if ln.strip()]
+    if not files:
+        return False
+    return all(f.startswith("seals/") for f in files)
+
+
 def rev_list(limit: int, target: str) -> list[str]:
     out = sh(["git", "rev-list", f"--max-count={limit}", target])
     return [ln.strip() for ln in out.splitlines() if ln.strip()]
@@ -226,7 +235,21 @@ def main() -> int:
                 who = "HEAD^1"
 
         if not p:
-            raise SystemExit(f"{sym('fail')} No seal found for {who} short hash (12): {hs}")
+            # If strict HEAD is requested, normally fail.
+            # Exception: allow a "seal-only HEAD commit" to rely on parent seal,
+            # otherwise committing seal artifacts becomes an infinite recursion.
+            if (not args.sha) and args.require_target and head_is_seal_only_commit():
+                parent = "HEAD^1"
+                hs_parent = sh(["git", "rev-parse", "--short=12", parent])
+                p_parent = find_latest_seal_for_short_hash(seals, hs_parent)
+                if not p_parent:
+                    raise SystemExit(f"{sym('fail')} No seal found for sealed-parent policy (HEAD^1): {hs_parent}")
+                print(f"{sym('arrow')} NOTE: HEAD is seal-only commit; requiring parent seal for {hs_parent}")
+                hs = hs_parent
+                p = p_parent
+                who = "HEAD^1"
+            else:
+                raise SystemExit(f"{sym('fail')} No seal found for {who} short hash (12): {hs}")
 
         if used_fallback_parent:
             print(f"{sym('arrow')} NOTE: HEAD seal not found; accepting parent commit seal (HEAD^1) by policy.")
