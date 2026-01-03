@@ -1,2 +1,28 @@
+# === GUS v4 Canonical Line Ending Policy ===
+
+# Default: enforce LF for all text files
 * text=auto eol=lf
-*.py text eol=lf
+
+# Explicit text formats
+*.py     text eol=lf
+*.sh     text eol=lf
+*.ps1    text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+
+# Windows scripts (still LF — bash-safe, git-safe)
+*.bat    text eol=lf
+*.cmd    text eol=lf
+
+# Binary files (never touched)
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.zip    binary
+*.exe    binary
+*.pdf    binary
