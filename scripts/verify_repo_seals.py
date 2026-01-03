@@ -41,6 +41,40 @@ def git_porcelain() -> list[str]:
     out = sh(["git", "status", "--porcelain"])
     return [ln for ln in out.splitlines() if ln.strip()]
 
+def changed_seal_jsons_in_head() -> list[Path]:
+    """
+    Return seal JSON files introduced by HEAD (union vs parent1/parent2).
+    Only meaningful when HEAD is seal-only.
+    """
+    root = repo_root()
+    changed: set[str] = set()
+
+    out1 = sh(["git", "diff", "--name-only", "HEAD^1..HEAD"])
+    for ln in out1.splitlines():
+        p = ln.strip().replace("\\", "/")
+        if p:
+            changed.add(p)
+
+    parents = sh(["git", "rev-list", "--parents", "-n", "1", "HEAD"]).split()
+    if len(parents) >= 3:
+        out2 = sh(["git", "diff", "--name-only", "HEAD^2..HEAD"])
+        for ln in out2.splitlines():
+            p = ln.strip().replace("\\", "/")
+            if p:
+                changed.add(p)
+
+    seal_jsons = []
+    for p in sorted(changed):
+        if p.startswith("seals/") and p.endswith(".json"):
+            seal_jsons.append(root / p)
+
+    return seal_jsons
+
+
+def is_ancestor(anc: str, desc: str = "HEAD") -> bool:
+    # git merge-base --is-ancestor exits 0 if anc is ancestor of desc
+    return run(["git", "merge-base", "--is-ancestor", anc, desc]) == 0
+
 def head_is_seal_only_commit() -> bool:
     """
     True if HEAD changes only seals/ files (including .sig) and nothing else.
@@ -267,28 +301,42 @@ def main() -> int:
             # Exception: allow a "seal-only HEAD commit" to rely on parent seal,
             # otherwise committing seal artifacts becomes an infinite recursion.
             if (not args.sha) and args.require_target and head_is_seal_only_commit():
-                parent = "HEAD^1"
-                hs_parent = sh(["git", "rev-parse", "--short=12", parent])
-                p_parent = find_latest_seal_for_short_hash(seals, hs_parent)
-                if not p_parent:
-                    raise SystemExit(f"{sym('fail')} No seal found for sealed-parent policy (HEAD^1): {hs_parent}")
-                print(f"{sym('arrow')} NOTE: HEAD is seal-only commit; requiring parent seal for {hs_parent}")
-                hs = hs_parent
-                p = p_parent
-                who = "HEAD^1"
-            else:
-                raise SystemExit(f"{sym('fail')} No seal found for {who} short hash (12): {hs}")
+                # Instead of forcing HEAD^1 to already be sealed (recursive trap),
+                # verify the seal(s) introduced by this seal-only commit.
+                candidates = changed_seal_jsons_in_head()
+                if not candidates:
+                    raise SystemExit(f"{sym('fail')} No seal json introduced by seal-only HEAD")
 
-        if used_fallback_parent:
-            print(f"{sym('arrow')} NOTE: HEAD seal not found; accepting parent commit seal (HEAD^1) by policy.")
+                # Prefer the newest by filename sort (timestamps in name)
+                candidates = sorted(candidates)
 
-        print(f"{sym('arrow')} Verifying {who} seal: {p}")
-        verify_one(
-            p,
-            verify_sig=verify_sig,
-            pubkey=pubkey,
-            allow_dirty_to_verify_seal=allow_dirty_to_verify_seal,
-        )
+                # Verify first candidate that targets an ancestor commit (by filename short12)
+                picked = None
+                for c in reversed(candidates):
+                    # filename: seal_<short12>_<timestamp>.json
+                    name = c.name
+                    parts = name.split("_")
+                    if len(parts) < 3:
+                        continue
+                    short12 = parts[1]
+                    if is_ancestor(short12, "HEAD"):
+                        picked = c
+                        break
+
+                if not picked:
+                    raise SystemExit(
+                        f"{sym('fail')} Seal-only HEAD introduced seals, but none target an ancestor commit.")
+
+                print(f"{sym('arrow')} NOTE: HEAD is seal-only; verifying introduced seal {picked.name}")
+                print(f"{sym('arrow')} Verifying HEAD seal: {picked}")
+                verify_one(
+                    picked,
+                    verify_sig=verify_sig,
+                    pubkey=pubkey,
+                    allow_dirty_to_verify_seal=allow_dirty_to_verify_seal,
+                )
+                print(f"{sym('check')} Seal verification complete.")
+                return 0
 
     if args.last > 0:
         batch = seals[-args.last:]
