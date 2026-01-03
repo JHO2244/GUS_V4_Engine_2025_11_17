@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+import json
+import os
+import re
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+
+REPO_ROOT_SENTINELS = (".git", "pyproject.toml", "requirements.txt", "pytest.ini")
+
+
+def _repo_root(start: Optional[Path] = None) -> Path:
+    p = (start or Path.cwd()).resolve()
+    for _ in range(12):
+        if any((p / s).exists() for s in REPO_ROOT_SENTINELS):
+            return p
+        if p.parent == p:
+            break
+        p = p.parent
+    return (start or Path.cwd()).resolve()
+
+
+def _run(cmd: List[str], cwd: Path) -> Tuple[int, str]:
+    # Deterministic-ish: capture stdout+stderr together, trim trailing whitespace.
+    proc = subprocess.run(
+        cmd,
+        cwd=str(cwd),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return proc.returncode, proc.stdout.rstrip()
+
+
+def _write_canonical_json(path: Path, payload: Dict[str, Any]) -> None:
+    # Canonical, stable JSON: sorted keys + LF + compact separators.
+    text = json.dumps(payload, sort_keys=True, indent=2, ensure_ascii=False)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text + "\n", encoding="utf-8", newline="\n")
+
+
+@dataclass(frozen=True)
+class AuditVerdict:
+    ok: bool
+    report: Dict[str, Any]
+
+    def to_canonical_json(self) -> str:
+        return json.dumps(self.report, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
+
+
+def _find_latest_epoch_anchor_tag(repo: Path) -> str:
+    code, out = _run(["git", "tag", "--list", "epoch_*_anchor_*"], cwd=repo)
+    if code != 0:
+        return ""
+    tags = [t.strip() for t in out.splitlines() if t.strip()]
+    if not tags:
+        return ""
+    tags.sort()
+    return tags[-1]
+
+
+def _file_exists(repo: Path, rel: str) -> bool:
+    return (repo / rel).is_file()
+
+
+def _required_files() -> List[str]:
+    # Minimal, stable "core artifacts" presence checks.
+    return [
+        "scripts/verify_repo_seals.py",
+        "scripts/guardian_gate.sh",
+        "scripts/epoch_lock_prep.sh",
+        "scripts/verify_epoch_anchor.py",
+        "scripts/verify_latest_seal.py",
+        "layer7_output_contract/output_contract_v0_1.py",
+        "layer7_output_contract/output_envelope_v0_1.py",
+        "layer8_genesis/genesis_declaration_v0_1.py",
+    ]
+
+
+def run_final_guardian_audit_v0_1(
+    repo_root: Optional[Path] = None,
+    require_seal_ok: bool = True,
+) -> AuditVerdict:
+    repo = _repo_root(repo_root)
+
+    # --- git identity ---
+    code_head, head = _run(["git", "rev-parse", "HEAD"], cwd=repo)
+    head = head.strip() if code_head == 0 else ""
+
+    anchor_tag = _find_latest_epoch_anchor_tag(repo)
+
+    # --- core file checks ---
+    missing = [p for p in _required_files() if not _file_exists(repo, p)]
+
+    # --- seal verification (merge-safe policy already implemented) ---
+    seal_cmd = ["python", "-m", "scripts.verify_repo_seals", "--head", "--no-sig", "--require-head", "--ci"]
+    seal_rc, seal_out = _run(seal_cmd, cwd=repo)
+
+    seal_ok = (seal_rc == 0) and ("[OK]" in seal_out or "Seal verification complete" in seal_out)
+
+    # --- build the report (deterministic ordering via sort_keys in JSON writer) ---
+    report: Dict[str, Any] = {
+        "a9_version": "0.1",
+        "repo": {
+            "root": str(repo).replace("\\", "/"),
+            "head": head,
+            "epoch_anchor_tag_latest": anchor_tag,
+        },
+        "checks": {
+            "required_files_missing": missing,
+            "seal_verify": {
+                "command": " ".join(seal_cmd),
+                "returncode": seal_rc,
+                "ok": seal_ok,
+                "output_tail": "\n".join(seal_out.splitlines()[-30:]),
+            },
+        },
+        "verdict": {
+            "ok": (not missing) and ((not require_seal_ok) or seal_ok),
+            "notes": [],
+        },
+    }
+
+    if missing:
+        report["verdict"]["notes"].append("Missing required core artifacts (files).")
+    if require_seal_ok and not seal_ok:
+        report["verdict"]["notes"].append("Seal verification failed (HEAD).")
+
+    return AuditVerdict(ok=bool(report["verdict"]["ok"]), report=report)
+
+
+def write_a9_report_v0_1(
+    out_path: Path,
+    repo_root: Optional[Path] = None,
+    require_seal_ok: bool = True,
+) -> AuditVerdict:
+    verdict = run_final_guardian_audit_v0_1(repo_root=repo_root, require_seal_ok=require_seal_ok)
+    _write_canonical_json(out_path, verdict.report)
+    return verdict
