@@ -1,9 +1,6 @@
 """
-GUS v4 – Layer 9: Preservation
+Layer 9 - Preservation / Packaging
 
-Lightweight package init.
-All real logic is in `L9_preservation_stub.py`.
-
-Intentionally kept free of cross-layer imports to avoid cycles.
+v0.1: deterministic preservation package builder + verifier.
 """
-# No imports here on purpose.
+
