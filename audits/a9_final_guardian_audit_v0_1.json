@@ -1,0 +1,21 @@
+{
+  "a9_version": "0.1",
+  "checks": {
+    "required_files_missing": [],
+    "seal_verify": {
+      "command": "python -m scripts.verify_repo_seals --head --no-sig --require-head --ci",
+      "ok": true,
+      "output_tail": "[OK] Seal verification complete.",
+      "returncode": 0
+    }
+  },
+  "repo": {
+    "epoch_anchor_tag_latest": "epoch_main_anchor_20251229",
+    "head": "428d038df561907a5bede890142624ffcf03ba93",
+    "root": "C:/Users/jhool/PyCharmProjects/GUS_V4_Engine_2025_11_17"
+  },
+  "verdict": {
+    "notes": [],
+    "ok": true
+  }
+}
