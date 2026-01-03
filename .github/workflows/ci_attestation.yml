@@ -37,9 +37,24 @@ jobs:
           echo "---- validator banner lines ----"
           python -c "from pathlib import Path; p=Path('epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py'); print('\n'.join(p.read_text(encoding='utf-8', errors='replace').splitlines()[0:140]))"
 
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Create venv + install deps
+        shell: bash
+        run: |
+          python -m venv venv
+          source venv/Scripts/activate
+          python -m pip install --upgrade pip
+          python -m pip install pytest cryptography
+
       - name: Merge-safe seal verification (HEAD + parents)
         shell: bash
         run: |
+          source venv/Scripts/activate
           set -euo pipefail
           git rev-parse HEAD
           PARENTS_LINE="$(git rev-list --parents -n 1 HEAD)"
@@ -55,19 +70,6 @@ jobs:
           fi
           echo "Verifying HEAD with merge-safe seal-only policy"
           python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Create venv + install deps
-        shell: bash
-        run: |
-          python -m venv venv
-          source venv/Scripts/activate
-          python -m pip install --upgrade pip
-          python -m pip install pytest cryptography
 
       - name: Attestation — tests
         shell: bash
@@ -85,4 +87,4 @@ jobs:
           source venv/Scripts/activate
           python epochs/epoch_bada220e_20251221T120542Z/epoch_validator_v0_1.py
 
-     
+
