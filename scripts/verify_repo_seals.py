@@ -42,12 +42,40 @@ def git_porcelain() -> list[str]:
     return [ln for ln in out.splitlines() if ln.strip()]
 
 def head_is_seal_only_commit() -> bool:
-    # True if HEAD changes only seals/ files (including .sig) and nothing else.
-    out = sh(["git", "show", "--name-only", "--pretty=format:", "HEAD"])
-    files = [ln.strip().replace("\\", "/") for ln in out.splitlines() if ln.strip()]
-    if not files:
+    """
+    True if HEAD changes only seals/ files (including .sig) and nothing else.
+
+    Merge-safe: compute the union of file changes vs each parent.
+    This avoids merge-commit quirks where `git show` may not list files reliably.
+    """
+    # Must have at least 1 parent
+    parents = sh(["git", "rev-list", "--parents", "-n", "1", "HEAD"]).split()
+    if len(parents) < 2:
         return False
-    return all(f.startswith("seals/") for f in files)
+
+    # Collect changed files vs parent1 and (if present) parent2
+    changed: set[str] = set()
+
+    # parent1 diff
+    out1 = sh(["git", "diff", "--name-only", "HEAD^1..HEAD"])
+    for ln in out1.splitlines():
+        p = ln.strip().replace("\\", "/")
+        if p:
+            changed.add(p)
+
+    # parent2 diff (merge commits)
+    if len(parents) >= 3:
+        out2 = sh(["git", "diff", "--name-only", "HEAD^2..HEAD"])
+        for ln in out2.splitlines():
+            p = ln.strip().replace("\\", "/")
+            if p:
+                changed.add(p)
+
+    if not changed:
+        return False
+
+    return all(p.startswith("seals/") for p in changed)
+
 
 
 def rev_list(limit: int, target: str) -> list[str]:
