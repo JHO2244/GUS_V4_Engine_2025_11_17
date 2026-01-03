@@ -27,6 +27,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install cryptography
 
+      - name: Merge-safe seal verification (HEAD + parents)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          PARENTS_LINE="$(git rev-list --parents -n 1 HEAD)"
+          echo "PARENTS_LINE=$PARENTS_LINE"
+          P1="$(echo "$PARENTS_LINE" | awk '{print $2}')"
+          P2="$(echo "$PARENTS_LINE" | awk '{print $3}')"
+          if [ -n "${P2:-}" ]; then
+            echo "Merge commit detected — verifying both parents"
+            python -m scripts.verify_repo_seals --sha "$P1" --no-sig --ci
+            python -m scripts.verify_repo_seals --sha "$P2" --no-sig --ci
+          else
+            echo "Not a merge commit — parent check skipped"
+          fi
+          echo "Verifying HEAD with merge-safe seal-only policy"
+          python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
+
       - name: Epoch Enforcement Tier (STRICT only when labeled)
         if: ${{ github.event_name == 'pull_request' && (contains(join(github.event.pull_request.labels.*.name, ','), 'epoch-lock-required') || contains(join(github.event.pull_request.labels.*.name, ','), 'milestone')) }}
         run: |
