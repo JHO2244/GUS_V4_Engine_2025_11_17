@@ -37,10 +37,13 @@ class OutputEnvelopeV0_1:
     input_seal_ref: str
     decision_ref: str
 
-    score_total: float
-    score_breakdown: Dict[str, float]
+    # P3.1: wire policy verdict reference (string ref, not full payload)
+    policy_verdict_ref: Optional[str] = None
 
-    verdict: Verdict
+    score_total: float = 0.0
+    score_breakdown: Dict[str, float] = field(default_factory=dict)
+
+    verdict: Verdict = "PASS"
 
     artifacts: List[str] = field(default_factory=list)
     explainability_trace_ref: Optional[str] = None
@@ -56,6 +59,7 @@ class OutputEnvelopeV0_1:
             "run_id": self.run_id,
             "input_seal_ref": self.input_seal_ref,
             "decision_ref": self.decision_ref,
+            "policy_verdict_ref": self.policy_verdict_ref,
             "score_total": self.score_total,
             "score_breakdown": dict(self.score_breakdown),
             "verdict": self.verdict,
@@ -85,6 +89,7 @@ class OutputEnvelopeV0_1:
             run_id=self.run_id,
             input_seal_ref=self.input_seal_ref,
             decision_ref=self.decision_ref,
+            policy_verdict_ref=self.policy_verdict_ref,
             score_total=self.score_total,
             score_breakdown=dict(self.score_breakdown),
             verdict=self.verdict,
