@@ -46,3 +46,6 @@ class ExecutionRecord:
     audit_trace: Mapping[str, Any]
     side_effect_events: Tuple[Mapping[str, Any], ...]
     record_hash: str
+
+    # NEW (P2.2 wiring)
+    policy_verdict: dict | None = None
