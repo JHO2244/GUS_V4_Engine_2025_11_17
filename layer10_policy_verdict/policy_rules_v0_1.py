@@ -125,6 +125,10 @@ class RuleWarnMissingRequiredKeys(BaseRule):
     required_keys: Tuple[str, ...] = ("action", "target")
 
     def evaluate(self, ctx: RuleContext) -> Optional[PolicyVerdict]:
+        # If inputs are empty, let the ABSTAIN rule own that case.
+        if not ctx.inputs:
+            return None
+
         missing = tuple(k for k in self.required_keys if k not in ctx.inputs)
         if not missing:
             return None
