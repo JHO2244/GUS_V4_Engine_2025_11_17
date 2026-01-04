@@ -43,6 +43,11 @@ class OutputContractV0_1:
         if not env.decision_ref:
             violations.append(ContractViolation("decision_ref", "Must be non-empty"))
 
+        # policy verdict reference must be present (fail-closed)
+        pv_ref = getattr(env, 'policy_verdict_ref', None)
+        if not isinstance(pv_ref, str) or not pv_ref.strip():
+            violations.append(ContractViolation('policy_verdict_ref', 'Must be non-empty'))
+
         if not (0.0 <= float(env.score_total) <= 10.0):
             violations.append(ContractViolation("score_total", "Must be within [0.0, 10.0]"))
 
