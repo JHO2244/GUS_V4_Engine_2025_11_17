@@ -8,6 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from layer7_output_contract.output_builder_v0_1 import build_output_envelope_v0_1
+from utils.canonical_json import write_canonical_json_file
+
+
 
 REPO_ROOT_SENTINELS = (".git", "pyproject.toml", "requirements.txt", "pytest.ini")
 
@@ -138,7 +142,35 @@ def write_a9_report_v0_1(
     out_path: Path,
     repo_root: Optional[Path] = None,
     require_seal_ok: bool = True,
+    envelope_out_path: Optional[Path] = None,
 ) -> AuditVerdict:
     verdict = run_final_guardian_audit_v0_1(repo_root=repo_root, require_seal_ok=require_seal_ok)
     _write_canonical_json(out_path, verdict.report)
+
+    # Also emit an A7 OutputEnvelope derived from this A9 run (fail-closed).
+    # NOTE: A9 does not compute a policy verdict; we mark it explicitly but non-empty to satisfy contract.
+    env_path = envelope_out_path or Path("audits/a7_output_envelope_from_a9_v0_1.json")
+
+    head = verdict.report.get("repo", {}).get("head", "") or ""
+    run_id = head[:12] if head else "unknown"
+
+    env = build_output_envelope_v0_1(
+        producer="GUSv4.A9",
+        run_id=run_id,
+        input_seal_ref=head or "unknown",
+        decision_ref="A9.final_guardian_audit.v0.1",
+        policy_verdict_ref="policy_verdict:a9_unavailable_v0_1",
+        score_total=10.0 if verdict.ok else 0.0,
+        score_breakdown={
+            "TD": 10.0 if verdict.ok else 0.0,
+            "SC": 10.0 if verdict.ok else 0.0,
+            "AP": 10.0 if verdict.ok else 0.0,
+            "RL": 10.0 if verdict.ok else 0.0,
+        },
+        verdict="PASS" if verdict.ok else "FAIL",
+        artifacts=[out_path.as_posix()],
+        explainability_trace_ref=None,
+    )
+
+    write_canonical_json_file(env_path, env.to_dict(include_integrity=True))
     return verdict
