@@ -10,12 +10,13 @@ Contract v0.1:
 - export_execution_record(record) returns only JSON-safe primitives:
   dict/list/str/int/float/bool/None
 - Tuples are converted to lists (stable order preserved).
+- Mappings are exported with lexicographically sorted string keys (deterministic).
 """
 
 from __future__ import annotations
 
-from dataclasses import is_dataclass, asdict
-from typing import Any, Mapping, Dict, List
+from dataclasses import asdict, is_dataclass
+from typing import Any, Dict, Mapping
 
 from .execution_record_v0_1 import ExecutionRecord
 
@@ -32,13 +33,13 @@ def _to_json_safe(obj: Any) -> Any:
     if is_dataclass(obj):
         return _to_json_safe(asdict(obj))
 
-    # mappings
+    # mappings (deterministic key order)
     if isinstance(obj, Mapping):
         out: Dict[str, Any] = {}
-        for k, v in obj.items():
+        for k in sorted(obj.keys()):
             if not isinstance(k, str):
                 raise TypeError(f"Non-string key not allowed in export: {k!r}")
-            out[k] = _to_json_safe(v)
+            out[k] = _to_json_safe(obj[k])
         return out
 
     # tuples/lists -> lists
@@ -52,8 +53,8 @@ def export_execution_record(record: ExecutionRecord) -> Dict[str, Any]:
     """
     Deterministic JSON-safe export of ExecutionRecord.
 
-    Note: Dict insertion order in Python is deterministic; downstream canonical writer
-    will enforce stable serialization.
+    Downstream canonical writer enforces stable serialization; we also sort mapping keys
+    here to guarantee deterministic structure even before serialization.
     """
     if not isinstance(record, ExecutionRecord):
         raise TypeError("record must be an ExecutionRecord")
@@ -64,6 +65,7 @@ def export_execution_record(record: ExecutionRecord) -> Dict[str, Any]:
         "result": _to_json_safe(record.result),
         "audit_trace": _to_json_safe(record.audit_trace),
         "side_effect_events": _to_json_safe(record.side_effect_events),
+        "policy_verdict": _to_json_safe(record.policy_verdict),
         "record_hash": record.record_hash,
     }
     return _to_json_safe(payload)
