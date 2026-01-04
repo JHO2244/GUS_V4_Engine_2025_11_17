@@ -145,7 +145,6 @@ def write_a9_report_v0_1(
     envelope_out_path: Optional[Path] = None,
 ) -> AuditVerdict:
     verdict = run_final_guardian_audit_v0_1(repo_root=repo_root, require_seal_ok=require_seal_ok)
-    _write_canonical_json(out_path, verdict.report)
 
     # Also emit an A7 OutputEnvelope derived from this A9 run (fail-closed).
     # NOTE: A9 does not compute a policy verdict; we mark it explicitly but non-empty to satisfy contract.
@@ -172,5 +171,78 @@ def write_a9_report_v0_1(
         explainability_trace_ref=None,
     )
 
-    write_canonical_json_file(env_path, env.to_dict(include_integrity=True))
-    return verdict
+    # Write envelope first so the report can prove emission.
+    env_payload = env.to_dict(include_integrity=True)
+    write_canonical_json_file(env_path, env_payload)
+
+    # Prove envelope emission (exists + integrity_ok + schema + policy_verdict_ref).
+    env_exists = env_path.is_file()
+    env_integrity_ok = False
+    env_schema_version = ""
+    env_policy_verdict_ref = ""
+
+    if env_exists:
+        try:
+            loaded = json.loads(env_path.read_text(encoding="utf-8"))
+
+            # schema + policy verdict ref should be extracted even if integrity shape varies
+            env_schema_version = str(
+                loaded.get("schema_version")
+                or loaded.get("schema")
+                or env_payload.get("schema_version")
+                or ""
+            )
+            env_policy_verdict_ref = str(
+                loaded.get("policy_verdict_ref")
+                or env_payload.get("policy_verdict_ref")
+                or ""
+            )
+
+            # Robust integrity parsing:
+            # - dict: {"ok": true}
+            # - bool: true/false
+            # - string: treat non-empty as "present/ok" for emission proof purposes
+            integ = loaded.get("integrity", None)
+
+            if isinstance(integ, dict):
+                env_integrity_ok = bool(integ.get("ok", False))
+            elif isinstance(integ, bool):
+                env_integrity_ok = bool(integ)
+            elif isinstance(integ, str):
+                env_integrity_ok = (integ.strip() != "")
+            else:
+                # Fallback: if integrity isn't in expected shapes, use presence of env_payload integrity
+                integ2 = env_payload.get("integrity", None)
+                if isinstance(integ2, dict):
+                    env_integrity_ok = bool(integ2.get("ok", False))
+                elif isinstance(integ2, bool):
+                    env_integrity_ok = bool(integ2)
+                elif isinstance(integ2, str):
+                    env_integrity_ok = (integ2.strip() != "")
+                else:
+                    env_integrity_ok = False
+
+        except Exception:
+            env_integrity_ok = False
+            env_schema_version = ""
+            env_policy_verdict_ref = ""
+
+    verdict.report["a7_output_envelope"] = {
+        "path": env_path.as_posix(),
+        "exists": bool(env_exists),
+        "integrity_ok": bool(env_integrity_ok),
+        "schema_version": env_schema_version,
+        "policy_verdict_ref": env_policy_verdict_ref,
+    }
+
+    # Fail-closed: if envelope emission is requested but missing/invalid, the A9 report must fail.
+    if not env_exists:
+        verdict.report["verdict"]["ok"] = False
+        verdict.report["verdict"]["notes"].append("A7 output envelope missing (emission expected).")
+    elif not env_integrity_ok:
+        verdict.report["verdict"]["ok"] = False
+        verdict.report["verdict"]["notes"].append("A7 output envelope integrity failed (emission expected).")
+
+    _write_canonical_json(out_path, verdict.report)
+    return AuditVerdict(ok=bool(verdict.report["verdict"]["ok"]), report=verdict.report)
+
