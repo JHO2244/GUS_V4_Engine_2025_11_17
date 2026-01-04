@@ -1,4 +1,4 @@
-""""
+"""
 GUS v4.0 — L8 Execution Layer
 Execution Runtime v0.1
 
@@ -20,18 +20,22 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Mapping, Callable, Tuple
+from typing import Any, Callable, Mapping, Tuple
 
 from layer8_execution.action_registry_v0_1 import (
-    is_action_allowed,
     get_declared_side_effect_channels,
+    is_action_allowed,
 )
 from layer8_execution.execution_record_v0_1 import (
+    ExecutionRecord,
     ExecutionRequest,
     ExecutionResult,
-    ExecutionRecord,
 )
 from layer8_execution.side_effects_v0_1 import SideEffectBus
+
+from layer10_policy_verdict.policy_verdict_engine_v0_1 import PolicyVerdictEngine
+from layer10_policy_verdict.policy_rules_v0_1 import RuleContext
+from layer10_policy_verdict.verdict_types_v0_1 import VerdictCode
 
 
 _FIXED_TIMESTAMP_UTC = "1970-01-01T00:00:00Z"
@@ -48,7 +52,6 @@ def _hash_str(s: str) -> str:
 def _events_to_wire(events: Tuple[Any, ...]) -> Tuple[Mapping[str, Any], ...]:
     out: list[Mapping[str, Any]] = []
     for ev in events:
-        # SideEffectEvent is a dataclass; access attributes explicitly.
         out.append(
             {
                 "seq": int(getattr(ev, "seq")),
@@ -65,6 +68,7 @@ def _events_to_wire(events: Tuple[Any, ...]) -> Tuple[Mapping[str, Any], ...]:
 class ExecutionRuntimeV0_1:
     def __init__(self, clock_utc: Callable[[], str] | None = None) -> None:
         self._clock_utc = clock_utc or (lambda: _FIXED_TIMESTAMP_UTC)
+        self._policy_engine = PolicyVerdictEngine()
 
     @staticmethod
     def _require_fields(decision: Mapping[str, Any]) -> None:
@@ -79,6 +83,12 @@ class ExecutionRuntimeV0_1:
         for k in ["decision_id", "verdict", "authorized_action", "decision_hash"]:
             if not isinstance(decision[k], str) or not decision[k].strip():
                 raise ValueError(f"Field '{k}' must be a non-empty string.")
+
+    def _policy_preflight(self, *, action_id: str, actor_id: str, inputs: Mapping[str, Any]) -> Mapping[str, Any]:
+        verdict = self._policy_engine.evaluate(
+            RuleContext(action_id=action_id, actor_id=actor_id, inputs=inputs)
+        )
+        return verdict.to_dict()
 
     def execute(self, decision: Mapping[str, Any]) -> ExecutionRecord:
         """
@@ -95,17 +105,57 @@ class ExecutionRuntimeV0_1:
             decision_hash=decision["decision_hash"],
         )
 
+        # Policy preflight: uses req fields (no undefined vars)
+        actor_id = str(decision.get("actor_id", "UNKNOWN_ACTOR"))
+        policy_verdict_wire = self._policy_preflight(
+            action_id=req.authorized_action,
+            actor_id=actor_id,
+            inputs=req.parameters,
+        )
+
+        # Enforce policy DENY immediately (hard stop), but still return a record
+        if policy_verdict_wire["code"] == VerdictCode.DENY.value:
+            return self._record(
+                req,
+                status="BLOCKED",
+                note=f"Execution denied by policy: {policy_verdict_wire.get('summary', '')}",
+                side_effect_events=(),
+                declared_channels=(),
+                policy_verdict=policy_verdict_wire,
+            )
+
         # Gate 1: verdict must be ALLOW
         if req.verdict != "ALLOW":
-            return self._record(req, status="BLOCKED", note="Verdict not ALLOW", side_effect_events=(), declared_channels=())
+            return self._record(
+                req,
+                status="BLOCKED",
+                note="Verdict not ALLOW",
+                side_effect_events=(),
+                declared_channels=(),
+                policy_verdict=policy_verdict_wire,
+            )
 
         # Gate 2: action must be allow-listed
         if not is_action_allowed(req.authorized_action):
-            return self._record(req, status="BLOCKED", note="Action not in registry", side_effect_events=(), declared_channels=())
+            return self._record(
+                req,
+                status="BLOCKED",
+                note="Action not in registry",
+                side_effect_events=(),
+                declared_channels=(),
+                policy_verdict=policy_verdict_wire,
+            )
 
         # v0.1: NOOP only
         if req.authorized_action != "NOOP":
-            return self._record(req, status="BLOCKED", note="Only NOOP permitted in v0.1", side_effect_events=(), declared_channels=())
+            return self._record(
+                req,
+                status="BLOCKED",
+                note="Only NOOP permitted in v0.1",
+                side_effect_events=(),
+                declared_channels=(),
+                policy_verdict=policy_verdict_wire,
+            )
 
         # L8-4/L8-6: declared channels enforced by registry+bus. Fail-closed on invalid registry metadata.
         run_id = _hash_str(_stable_json({"decision_id": req.decision_id, "decision_hash": req.decision_hash}))
@@ -117,12 +167,25 @@ class ExecutionRuntimeV0_1:
                 action_id=req.authorized_action,
                 run_id=run_id,
             )
-            # NOOP executes: no emissions expected.
             side_effect_events = _events_to_wire(bus.snapshot())
         except ValueError:
-            return self._record(req, status="BLOCKED", note="Registry metadata invalid", side_effect_events=(), declared_channels=())
+            return self._record(
+                req,
+                status="BLOCKED",
+                note="Registry metadata invalid",
+                side_effect_events=(),
+                declared_channels=(),
+                policy_verdict=policy_verdict_wire,
+            )
 
-        return self._record(req, status="SUCCESS", note="NOOP executed", side_effect_events=side_effect_events, declared_channels=declared)
+        return self._record(
+            req,
+            status="SUCCESS",
+            note="NOOP executed",
+            side_effect_events=side_effect_events,
+            declared_channels=declared,
+            policy_verdict=policy_verdict_wire,
+        )
 
     def _record(
         self,
@@ -132,6 +195,7 @@ class ExecutionRuntimeV0_1:
         note: str,
         side_effect_events: Tuple[Mapping[str, Any], ...],
         declared_channels: Tuple[str, ...] = (),
+        policy_verdict: Mapping[str, Any] | None = None,
     ) -> ExecutionRecord:
         ts = self._clock_utc()
 
@@ -144,6 +208,7 @@ class ExecutionRuntimeV0_1:
                     "timestamp_utc": ts,
                     "note": note,
                     "side_effect_events": side_effect_events,
+                    "policy_verdict": policy_verdict or {},
                 }
             )
         )
@@ -157,12 +222,17 @@ class ExecutionRuntimeV0_1:
 
         execution_id = _hash_str(_stable_json({"decision_id": req.decision_id, "execution_hash": execution_hash}))
 
-        emitted_channels = tuple(sorted({
-            ch for ch in (
-                (ev.get("channel") if isinstance(ev, dict) else None) for ev in side_effect_events
+        emitted_channels = tuple(
+            sorted(
+                {
+                    ch
+                    for ch in (
+                        (ev.get("channel") if isinstance(ev, dict) else None) for ev in side_effect_events
+                    )
+                    if isinstance(ch, str) and ch.strip()
+                }
             )
-            if isinstance(ch, str) and ch.strip()
-        }))
+        )
         emitted_count = len(side_effect_events)
 
         audit_trace = {
@@ -177,6 +247,7 @@ class ExecutionRuntimeV0_1:
             "emitted_channels": emitted_channels,
             "emitted_count": emitted_count,
             "side_effect_count": len(side_effect_events),
+            "policy_verdict": policy_verdict or {},
         }
 
         record_hash = _hash_str(
@@ -189,16 +260,18 @@ class ExecutionRuntimeV0_1:
                         "timestamp_utc": result.timestamp_utc,
                         "execution_hash": result.execution_hash,
                         "note": result.note,
-            "declared_channels": declared_channels,
-            "emitted_channels": emitted_channels,
-            "emitted_count": emitted_count,
+                        "declared_channels": declared_channels,
+                        "emitted_channels": emitted_channels,
+                        "emitted_count": emitted_count,
                     },
                     "audit_trace": audit_trace,
                     "side_effect_events": side_effect_events,
+                    "policy_verdict": policy_verdict or {},
                 }
             )
         )
 
+        # NOTE: ExecutionRecord must have policy_verdict: dict | None field.
         return ExecutionRecord(
             execution_id=execution_id,
             decision_hash=req.decision_hash,
@@ -206,4 +279,6 @@ class ExecutionRuntimeV0_1:
             audit_trace=audit_trace,
             side_effect_events=side_effect_events,
             record_hash=record_hash,
+            policy_verdict=dict(policy_verdict) if policy_verdict is not None else None,
         )
+
