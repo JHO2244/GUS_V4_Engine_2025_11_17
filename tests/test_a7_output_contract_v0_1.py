@@ -10,6 +10,7 @@ def _good_env() -> OutputEnvelopeV0_1:
         run_id="run-123",
         input_seal_ref="seals/seal_example.json",
         decision_ref="decision:abc123",
+        policy_verdict_ref="policy_verdict:unset",
         score_total=9.9,
         score_breakdown={"TD": 9.9, "SC": 9.9, "AP": 9.9, "RL": 9.9},
         verdict="PASS",
