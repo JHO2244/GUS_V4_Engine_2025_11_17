@@ -157,10 +157,15 @@ def main() -> None:
     engine_health = get_engine_health_as_dict()
     print(f"overall_ok => {engine_health['overall_ok']}")
 
-    for layer_id, lh in engine_health["layers"].items():
+    for _layer_id, lh in engine_health.get("layers", {}).items():
+        engine_ok = bool(lh.get("engine_ok", False))
+        files_checked = int(lh.get("files_checked", 0) or 0)
+        reason = lh.get("reason") or ""
+        # Deterministic error count: 0 if ok, else 1 (reason carries details)
+        errors = 0 if engine_ok else 1
         print(
-            f"Layer {lh['layer']} ({lh['name']}): "
-            f"verified={lh['verified']}, errors={len(lh['errors'])}"
+            f"Layer {lh.get('layer')} ({lh.get('name')}): "
+            f"engine_ok={engine_ok}, files_checked={files_checked}, errors={errors}, reason={reason}"
         )
 
     print("\n[GUS v4] Diagnostics run complete.")
