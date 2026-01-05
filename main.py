@@ -32,14 +32,20 @@ from layer9_preservation.L9_preservation_stub import (
     verify_preservation,
 )
 
-from pas.pas_seal_engine_stub import generate_seal_proto
-
-if __name__ == "__main__":
-    seal = generate_seal_proto(scope="PAS_L5_L9")
-    print("Proto Seal Generated:")
-    print(vars(seal))
+try:
+    from pas.pas_seal_engine_stub import generate_seal_proto  # optional stub
+except Exception:
+    generate_seal_proto = None
 
 from utils import get_guardian_logger
+
+if __name__ == "__main__":
+    if generate_seal_proto is None:
+        print("Proto Seal Generated: SKIPPED (generate_seal_proto not available)")
+    else:
+        seal = generate_seal_proto(scope="PAS_L5_L9")
+        print("Proto Seal Generated:")
+        print(vars(seal))
 
 logger = get_guardian_logger("GUSv4.Main")
 
