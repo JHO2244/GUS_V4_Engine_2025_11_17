@@ -1,6 +1,6 @@
+#!/usr/bin/env python
 # scripts/seal_snapshot.py
 from __future__ import annotations
-from utils.canonical_json import write_canonical_json_file
 
 import hashlib
 import os
@@ -10,7 +10,21 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import os
+# ------------------------------------------------------------
+# Invocation hardening (GDVS)
+# ------------------------------------------------------------
+# Support BOTH:
+#   1) python -m scripts.seal_snapshot   (preferred)
+#   2) python scripts/seal_snapshot.py  (allowed; we repair sys.path)
+#
+# Also helps Git Bash exec via shebang when possible.
+if __package__ is None or __package__ == "":
+    # Running as a file path; ensure repo root is on sys.path so "utils" resolves.
+    this_file = Path(__file__).resolve()
+    repo_root = this_file.parents[1]  # scripts/ -> repo root
+    sys.path.insert(0, str(repo_root))
+
+from utils.canonical_json import write_canonical_json_file  # noqa: E402
 
 # CI safety rail: attestation is verify-only; do not generate new seal artifacts in CI.
 if os.environ.get("GUS_CI", "").strip() == "1":
@@ -19,15 +33,18 @@ if os.environ.get("GUS_CI", "").strip() == "1":
 OUT_DIR = Path("seals")
 LOCK_FILE = Path("requirements.lock.txt")
 
+
 def to_posix(s: str) -> str:
     bs = chr(92)  # backslash
     return s.replace(bs, "/")
+
 
 def run(cmd: list[str]) -> str:
     p = subprocess.run(cmd, capture_output=True, text=True)
     if p.returncode != 0:
         raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{p.stdout}\n{p.stderr}")
     return (p.stdout or "").strip()
+
 
 def sha256_file(path: Path) -> str | None:
     if not path.exists():
@@ -37,6 +54,7 @@ def sha256_file(path: Path) -> str | None:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
 
 def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -60,7 +78,6 @@ def main() -> int:
     lock_sha = sha256_file(LOCK_FILE)
 
     # test count (best-effort; keep quick)
-    # You already run full tests in gate; here we store the discovered count (no execution).
     test_collect = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q"], capture_output=True, text=True)
     collected_lines = (test_collect.stdout or "").splitlines()
     collected_count = sum(1 for line in collected_lines if line.strip() and " " not in line.strip())
@@ -90,13 +107,12 @@ def main() -> int:
         },
     }
 
-    # filename includes commit prefix
     out_path = OUT_DIR / f"seal_{commit[:12]}_{now_utc.replace(':','').replace('-','')}.json"
     write_canonical_json_file(out_path, snapshot)
 
-
     print(f"OK: wrote {out_path.as_posix()}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
