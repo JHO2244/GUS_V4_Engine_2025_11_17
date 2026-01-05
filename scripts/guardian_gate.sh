@@ -108,7 +108,6 @@ check_working_tree_cleanliness() {
   return 0
 }
 
-
 is_epoch_anchor_tag() {
   local tag="$1"
   [[ "$tag" == epoch_*_anchor_* ]]
@@ -247,6 +246,81 @@ enforce_seals_policy() {
   enforce_seal_adds_are_for_anchor_commits
 }
 
+verify_seals_dev_flow() {
+  # Milestone mode (file-flag) requires an exact HEAD seal (no fallback).
+  if [[ -f ".gus/milestone_required" ]]; then
+    echo "🧱 milestone: strict HEAD seal required"
+    if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
+      python -m scripts.verify_repo_seals --head --require-head --sig-strict
+    else
+      python -m scripts.verify_repo_seals --head --require-head --no-sig
+    fi
+  else
+    # Dev flow: nearest sealed ancestor fallback allowed (current behavior).
+    if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
+      python -m scripts.verify_repo_seals --head --sig-strict
+    else
+      python -m scripts.verify_repo_seals --head --no-sig
+    fi
+  fi
+}
+
+emit_threat_model() {
+  local branch h12 out dist sealed_h12
+  branch="$(git branch --show-current 2>/dev/null || true)"
+  h12="$(head12)"
+  out="$(nearest_sealed_ancestor_distance_first_parent || true)"
+  dist="$(awk '{print $1}' <<<"$out" 2>/dev/null || echo "")"
+  sealed_h12="$(awk '{print $2}' <<<"$out" 2>/dev/null || echo "")"
+
+  echo "🛡 threat-model: Guardian Gate"
+  echo "Repo: ${REPO_ROOT}"
+  echo "Branch: ${branch}"
+  echo "HEAD: ${h12}"
+  if [[ -n "${sealed_h12:-}" ]]; then
+    echo "Nearest sealed ancestor: ${sealed_h12} (distance: ${dist})"
+  else
+    echo "Nearest sealed ancestor: NONE"
+  fi
+  echo
+
+  echo "=== D3 Threat Model (v0.1, repo-local) ==="
+  echo
+  echo "Assets (What we protect)"
+  echo " - Integrity chain-of-custody (seals/, epoch anchors)"
+  echo " - Deterministic execution + reproducible verification"
+  echo " - Governance outputs (audits/, manifests/, envelopes)"
+  echo " - Policy enforcement logic (anti-weaponization + privacy)"
+  echo
+  echo "Trust Boundaries"
+  echo " - Working tree vs staged index vs committed history"
+  echo " - Local machine vs remote origin (GitHub)"
+  echo " - Sealed ancestor vs unsealed drift window on main"
+  echo
+  echo "Primary Threats"
+  echo " T1: Seal tampering (edit/delete/rename seals) -> blocked by enforce_seals_policy"
+  echo " T2: Anchor spoofing (epoch anchor without exact seal) -> blocked by enforce_head_seal_strictness"
+  echo " T3: Drift on main (unsealed commits exceed max) -> blocked by drift limit"
+  echo " T4: Recursion / infinite loops (gate re-entry) -> blocked by recursion guard env var"
+  echo " T5: Hidden state (cached deps/artifacts) -> mitigated by D2 clean/rehydrate discipline"
+  echo " T6: Commit-path bypass (pre-commit assumptions) -> mitigated by explicit mode + staged-change rules"
+  echo " T7: Supply-chain dependency drift -> mitigated by explicit requirements + rehydrate tests"
+  echo
+  echo "Controls (Implemented)"
+  echo " - Fail-closed main drift rail: GUS_MAX_UNSEALED_COMMITS=${GUS_MAX_UNSEALED_COMMITS}"
+  echo " - Anchor exactness rail: GUS_REQUIRE_SEALED_ANCHOR=${GUS_REQUIRE_SEALED_ANCHOR}"
+  echo " - Seals/ staged-change allowlist + anchor-only seal adds"
+  echo " - Seal verification: scripts.verify_repo_seals (strict in milestone mode)"
+  echo " - Linguistic guard (non-blocking informational layer)"
+  echo
+  echo "Residual Risks (Explicit)"
+  echo " - If HEAD remains unsealed, nearest sealed ancestor fallback is allowed unless milestone flag is set."
+  echo " - Local filesystem compromise outside git cannot be fully prevented by repo scripts."
+  echo
+  echo "D3 Output"
+  echo " - This threat-model is emitted deterministically to stdout (no timestamps)."
+}
+
 main() {
   REPO_ROOT="$(git rev-parse --show-toplevel)"
   cd "$REPO_ROOT"
@@ -259,15 +333,26 @@ main() {
   export GUS_GUARDIAN_GATE_RUNNING=1
   trap 'unset GUS_GUARDIAN_GATE_RUNNING' EXIT
 
-  # --- Mode must be defined BEFORE any checks use it (set -u safety) ---
+  # --- Mode: default normal; parse supported flags anywhere in args ---
   MODE="normal"
-  if [[ "${1:-}" == "--pre-commit" ]]; then
-    MODE="pre-commit"
+  local seen_mode=0
+  for arg in "$@"; do
+    case "$arg" in
+      --pre-commit)
+        MODE="pre-commit"; seen_mode=$((seen_mode+1));;
+      --threat-model)
+        MODE="threat-model"; seen_mode=$((seen_mode+1));;
+      *)
+        :;;
+    esac
+  done
+  if [[ "$seen_mode" -gt 1 ]]; then
+    echo "✖ BLOCKED: Multiple mode flags provided. Choose ONE:"
+    echo "  --pre-commit  OR  --threat-model"
+    exit 1
   fi
 
-
-  # --- Mode must be defined BEFORE any checks use it (set -u safety) ---
-  # --- Guardrail: prevent feature commits directly on main ---
+  # --- Guardrail: prevent feature commits directly on main (pre-commit only) ---
   if [[ "${MODE}" == "pre-commit" ]]; then
     branch="$(git branch --show-current 2>/dev/null || true)"
     if [[ "$branch" == "main" ]]; then
@@ -275,7 +360,7 @@ main() {
       msg_file="$(git rev-parse --git-path COMMIT_EDITMSG 2>/dev/null || true)"
       msg=""
       if [[ -n "${msg_file:-}" && -f "$msg_file" ]]; then
-        msg="$(tr '[:upper:]' '[:lower:]' < "$msg_file" | sed -e 's/^[[:space:]]*//' )"
+        msg="$(tr '[:upper:]' '[:lower:]' < "$msg_file" | sed -e 's/^[[:space:]]*//')"
       else
         msg="$(git log -1 --pretty=%B | tr '[:upper:]' '[:lower:]')"
       fi
@@ -294,8 +379,7 @@ main() {
     fi
   fi
 
-
-
+  # --- Standard checks (apply to normal + threat-model) ---
   echo "🛡 ${MODE}: Guardian Gate"
   echo "Repo: ${REPO_ROOT}"
 
@@ -308,24 +392,15 @@ main() {
     exit 0
   fi
 
-   # NORMAL gate: verify seals
-  # Milestone mode (file-flag) requires an exact HEAD seal (no fallback).
-  if [[ -f ".gus/milestone_required" ]]; then
-    echo "🧱 milestone: strict HEAD seal required"
-    if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
-      python -m scripts.verify_repo_seals --head --require-head --sig-strict
-    else
-      python -m scripts.verify_repo_seals --head --require-head --no-sig
-    fi
-  else
-    # Dev flow: nearest sealed ancestor fallback allowed (current behavior).
-    if [[ "${GUS_STRICT_SEALS:-0}" == "1" ]]; then
-      python -m scripts.verify_repo_seals --head --sig-strict
-    else
-      python -m scripts.verify_repo_seals --head --no-sig
-    fi
-  fi
+  # Verify seals (normal + threat-model)
+  verify_seals_dev_flow
 
+  # Threat-model mode: emit structured model and exit (no extra actions)
+  if [[ "${MODE}" == "threat-model" ]]; then
+    echo
+    emit_threat_model
+    exit 0
+  fi
 
   # 🧠 Linguistic Guard (non-blocking)
   python -m layer0_uam_v4.linguistic.linguistic_guard || true
