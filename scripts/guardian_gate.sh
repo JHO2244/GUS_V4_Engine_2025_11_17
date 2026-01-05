@@ -247,60 +247,6 @@ enforce_seals_policy() {
   enforce_seal_adds_are_for_anchor_commits
 }
 
-# --- Main drift guard (dev mode safety rail) ---
-# Config:
-#   GUS_MAX_UNSEALED_COMMITS: max distance HEAD is allowed to be past nearest sealed ancestor on main.
-head12() { git rev-parse --short=12 HEAD; }
-
-seal_exists_for_hash12() {
-  local h12="$1"
-  ls "seals/seal_${h12}_"*.json >/dev/null 2>&1
-}
-
-nearest_sealed_ancestor_distance_first_parent() {
-  # Walk first-parent history to avoid merge noise.
-  # Echoes: "<distance> <hash12>" or returns 1 if none found.
-  local i=0
-  while read -r c; do
-    local h12
-    h12="$(git rev-parse --short=12 "$c")"
-    if seal_exists_for_hash12 "$h12"; then
-      echo "$i $h12"
-      return 0
-    fi
-    i=$((i+1))
-  done < <(git rev-list --first-parent HEAD)
-  return 1
-}
-
-enforce_main_drift_limit() {
-  local branch
-  branch="$(git branch --show-current 2>/dev/null || true)"
-  [[ "$branch" != "main" ]] && return 0
-
-  local out dist sealed_h12 h12
-  h12="$(head12)"
-  out="$(nearest_sealed_ancestor_distance_first_parent || true)"
-  if [[ -z "$out" ]]; then
-    echo "✖ BLOCKED: No sealed ancestor found on main. Establish an epoch anchor + seal first."
-    exit 1
-  fi
-
-  dist="$(awk '{print $1}' <<<"$out")"
-  sealed_h12="$(awk '{print $2}' <<<"$out")"
-
-  if [[ "$dist" -gt "$GUS_MAX_UNSEALED_COMMITS" ]]; then
-    echo "✖ BLOCKED: main drifted too far past last sealed ancestor."
-    echo "  HEAD:            $h12"
-    echo "  Sealed ancestor: $sealed_h12"
-    echo "  Distance:        $dist commits (max allowed: $GUS_MAX_UNSEALED_COMMITS)"
-    echo
-    echo "Fix: create a new epoch_*_anchor_* tag on current main, then run the epoch lock PR flow."
-    exit 1
-  fi
-}
-
-
 main() {
   REPO_ROOT="$(git rev-parse --show-toplevel)"
   cd "$REPO_ROOT"
@@ -355,7 +301,7 @@ main() {
 
   check_working_tree_cleanliness || exit 1
   enforce_seals_policy || exit 1
-  enforce_main_drift_limit
+  enforce_head_seal_strictness
 
   if [[ "${MODE}" == "pre-commit" ]]; then
     echo "OK: pre-commit gate passed."
