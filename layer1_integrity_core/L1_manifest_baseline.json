@@ -1,13 +1,25 @@
 {
-  "generated_at": "2025-12-03T07:55:28.123468+00:00",
+  "generated_at": "GDVS_REBASELINE_V0_1_DETERMINISTIC",
   "files": [
     {
       "path": "layer1_integrity_core/L1_integrity_core_stub.py",
-      "sha256": "a259be13578197946191601eac55fcf954292c8def8df43e45e69d47be05f1d5"
+      "sha256": "541033c2cfcb4d5e5284ed706a53d3d2899210e5fbcea57420638e213b216e87"
+    },
+    {
+      "path": "layer1_integrity_core/__init__.py",
+      "sha256": "cae9e9cf21a0fb40692f5035c5c643913321c0316755074258118552ed326317"
+    },
+    {
+      "path": "layer1_security_spine/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "layer1_security_spine/gdvs_state_machine_v0_1.py",
+      "sha256": "ece4cc80ef957ef510229aa4524efb2cb46d9da6e3398f64360deb5ff3849576"
     },
     {
       "path": "gus_engine_health.py",
-      "sha256": "c6c8970349fbb69836b721e6b28b10a1ac79e39b32b72e4815f9728962749325"
+      "sha256": "b06997bc827de6054c25b0670897bd5440ee2ba775773efca2d0e57bb6b36afb"
     },
     {
       "path": "pas/pas_seal_engine_stub.py",
@@ -15,7 +27,11 @@
     },
     {
       "path": "tests/test_layer1_integrity_stub.py",
-      "sha256": "699fd9e8d2f5b0095c6504ad05eddd7ada0409690609be3385f49d35c07eb480"
+      "sha256": "4eec87211a24091be0d2d2584b55ae08daa260658b77f6b81ec2a104af53bf61"
+    },
+    {
+      "path": "tests/test_gdvs_state_machine_v0_1.py",
+      "sha256": "80c3ee935ba8f703db1cebbcce55d5d25ee372cc834944dbc6427416dbbe4f1c"
     }
   ]
 }
