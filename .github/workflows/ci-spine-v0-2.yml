@@ -80,5 +80,5 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest -q
+          python -m pytest -q
       
