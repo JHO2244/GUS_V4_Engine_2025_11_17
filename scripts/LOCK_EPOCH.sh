@@ -30,6 +30,7 @@ TXT
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
+PY="${GUS_PYTHON:-python}"
 
 # 🧠 Linguistic Guard (non-blocking): generates SSL ledger tied to this epoch lock
 python -m layer0_uam_v4.linguistic.linguistic_guard || true
@@ -78,13 +79,13 @@ if [[ -z "$SEAL" ]]; then
 fi
 
 # Sign
-./venv/Scripts/python -m scripts.sign_seal_signature "$SEAL" --priv "$PRIV"
+"$PY" -m scripts.sign_seal_signature "$SEAL" --priv "$PRIV"
 
 SIG="${SEAL}.sig"
 [[ -f "$SIG" ]] || die "Signature not created: $SIG"
 
 # Verify signature immediately (direct verifier)
-./venv/Scripts/python scripts/verify_seal_signature.py "$SEAL" --pub "$PUB"
+"$PY" scripts/verify_seal_signature.py "$SEAL" --pub "$PUB"
 
 echo "OK: Epoch seal signed + verified."
 
@@ -96,7 +97,8 @@ if [[ "$COMMIT_SIG" == "1" ]]; then
 
   git add "$SIG"
   git commit -m "chore: add signature for $(basename "$SEAL") (epoch lock)"
-  git push origin main
+  echo "NEXT: push manually when ready:"
+  echo "  git push origin main"
   echo "OK: .sig committed. New HEAD seal has been created (unsigned by default)."
 else
   echo "ℹ .sig NOT committed (default). This avoids infinite seal loops."
