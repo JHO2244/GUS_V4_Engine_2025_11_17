@@ -19,10 +19,9 @@ from pathlib import Path
 #
 # Also helps Git Bash exec via shebang when possible.
 if __package__ is None or __package__ == "":
-    # Running as a file path; ensure repo root is on sys.path so "utils" resolves.
     this_file = Path(__file__).resolve()
-    repo_root = this_file.parents[1]  # scripts/ -> repo root
-    sys.path.insert(0, str(repo_root))
+    repo_root_for_import = this_file.parents[1]  # scripts/ -> repo root
+    sys.path.insert(0, str(repo_root_for_import))
 
 from utils.canonical_json import write_canonical_json_file  # noqa: E402
 
@@ -56,11 +55,26 @@ def sha256_file(path: Path) -> str | None:
     return h.hexdigest()
 
 
+def _redact_executable(repo_root_path: Path) -> str:
+    """
+    D5-hard: prevent leaking absolute paths/usernames in committed seal artifacts.
+    - If sys.executable is inside repo, store repo-relative path (posix).
+    - Otherwise store sentinel "<system-python>".
+    """
+    exe = Path(sys.executable).resolve()
+    try:
+        rel = exe.relative_to(repo_root_path)
+        return to_posix(str(rel))
+    except Exception:
+        return "<system-python>"
+
+
 def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     repo_root = run(["git", "rev-parse", "--show-toplevel"])
     os.chdir(repo_root)
+    repo_root_path = Path(repo_root).resolve()
 
     commit = run(["git", "rev-parse", "HEAD"])
     branch = run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
@@ -86,13 +100,13 @@ def main() -> int:
         "gus": {"version": "v4", "artifact": "repo_seal_snapshot"},
         "timestamp_utc": now_utc,
         "git": {
-            "repo_root": to_posix(repo_root),
+            "repo_root": ".",  # D5-hard: never absolute
             "branch": branch,
             "commit": commit,
             "working_tree_clean": clean,
         },
         "python": {
-            "executable": to_posix(sys.executable),
+            "executable": _redact_executable(repo_root_path),  # D5-hard
             "version": sys.version.split()[0],
             "platform": platform.platform(),
         },
