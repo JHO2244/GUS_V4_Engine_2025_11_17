@@ -26,7 +26,7 @@
     },
     {
       "path": "tests/test_layer1_integrity_stub.py",
-      "sha256": "4eec87211a24091be0d2d2584b55ae08daa260658b77f6b81ec2a104af53bf61"
+      "sha256": "566ad74aff2621edbad375f440c64cc86f65c18ef6c985760d2fd2a87ae95cbd"
     },
     {
       "path": "tests/test_gdvs_state_machine_v0_1.py",
