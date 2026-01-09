@@ -15,6 +15,20 @@ def test_deterministic_hash_and_verdict():
     assert v1.object_hash == v2.object_hash
     assert v1.object_hash and len(v1.object_hash) == 64
 
+
+def test_merge_pr_to_main_is_allow_when_base_score_high():
+    from layer9_policy_verdict.src.policy_engine import evaluate_policy
+    from layer9_policy_verdict.src.verdict_types import VerdictLevel
+
+    action = {"type": "merge_pr", "target": "main"}
+    context = {"repo": "GUS_V4_Engine_2025_11_17", "drift_commits": 0}
+    policy = {"policy_id": "L9_BASE", "thresholds": {"allow": 9.7, "warn": 8.5}, "base_score": 9.8}
+
+    v = evaluate_policy(action=action, context=context, policy=policy, epoch_ref="epoch_X", chain_head="head_A")
+    assert v.level == VerdictLevel.ALLOW
+    assert v.score >= 9.7
+    assert v.reasons
+
 def test_threshold_mapping_allow_warn_block():
     action = {"type": "test"}
     context = {"drift_commits": 2}

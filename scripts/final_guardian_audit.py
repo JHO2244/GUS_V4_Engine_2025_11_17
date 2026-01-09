@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-import argparse
+import sys
 from pathlib import Path
+
+import argparse
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from layer9_final_guardian_audit.final_guardian_audit_v0_1 import write_a9_report_v0_1
 

@@ -1,35 +1,33 @@
-:: GUS v4 – Unified Diagnostics Runner (cmd.exe)
-:: Purpose: Run full test suite + main engine diagnostic (Layers 0–9)
-:: Usage:   scripts\run_diagnostics.bat
-
 @echo off
+setlocal EnableExtensions EnableDelayedExpansion
 
+REM GUS v4 – Unified Diagnostics Runner (cmd.exe)
+REM Purpose: Run full test suite + main engine diagnostic (Layers 0–9)
+REM Usage:   scripts\run_diagnostics.bat
 
-set -e
+REM Force repo root (directory above this script)
+cd /d "%~dp0\.." || (echo [GUS v4] ERROR: cannot cd to repo root & exit /b 1)
 
-@echo off
-REM GUS v4 - Unified diagnostics runner (Windows .bat)
+REM Choose explicit Python (prefer venv)
+set "PY=python"
+if exist "venv\Scripts\python.exe" set "PY=venv\Scripts\python.exe"
 
-echo [GUS v4] Activating virtual environment (if present)...
-
-REM Activate venv if it exists (Windows layout)
-IF EXIST "venv\Scripts\activate.bat" (
-    CALL "venv\Scripts\activate.bat"
-)
+echo [GUS v4] Using Python: %PY%
 
 echo.
 echo [GUS v4] Running pytest...
-pytest
+"%PY%" -m pytest -q
 IF ERRORLEVEL 1 (
     echo [GUS v4] Test suite failed. Aborting diagnostics.
-    EXIT /B %ERRORLEVEL%
+    exit /b %ERRORLEVEL%
 )
 
 echo.
 echo [GUS v4] Running main diagnostic...
-python main.py
+"%PY%" main.py
+IF ERRORLEVEL 1 (
+    echo [GUS v4] main.py failed.
+    exit /b %ERRORLEVEL%
+)
 
-REM No extra "Diagnostics complete" here – main.py already prints it.
-REM This keeps the final line canonical and under Python control.
-
-EXIT /B 0
+exit /b 0
