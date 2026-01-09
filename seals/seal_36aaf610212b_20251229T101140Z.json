@@ -1,0 +1,27 @@
+{
+  "deps": {
+    "lock_file_present": true,
+    "pip_freeze_sha256": "b9779afd157395e1add40ee4ebb08c24bf7bfe68b77713200bbb5501b5b29f3c",
+    "requirements_lock_sha256": "5a2833af7fa592003e2514851f276addcae00dca0cdc8bdc3a6fe1f084c68144"
+  },
+  "git": {
+    "branch": "feat/epoch-lock-pr-flow",
+    "commit": "36aaf610212b4c5d073d528ed23ab50002dc14cf",
+    "repo_root": "C:/Users/jhool/PyCharmProjects/GUS_V4_Engine_2025_11_17",
+    "working_tree_clean": true
+  },
+  "gus": {
+    "artifact": "repo_seal_snapshot",
+    "version": "v4"
+  },
+  "python": {
+    "executable": "C:/Users/jhool/PyCharmProjects/GUS_V4_Engine_2025_11_17/venv/Scripts/python.exe",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "version": "3.14.0"
+  },
+  "tests": {
+    "approx_collected_items": 51,
+    "collect_only_exit": 0
+  },
+  "timestamp_utc": "2025-12-29T10:11:40Z"
+}
