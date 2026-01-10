@@ -17,3 +17,11 @@
 *.pdf  binary
 *.zip  binary
 *.exe  binary
+
+# --- CI determinism: force LF in repo-tracked text ---
+*.py  text eol=lf
+*.sh  text eol=lf
+*.md  text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
