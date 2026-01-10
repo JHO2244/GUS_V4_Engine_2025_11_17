@@ -93,8 +93,8 @@ def run_final_guardian_audit_v0_1(
     repo = _repo_root(repo_root)
 
     # --- git identity ---
-    code_head, head = _run(["git", "rev-parse", "HEAD"], cwd=repo)
-    head = head.strip() if code_head == 0 else ""
+    code_head, head_actual = _run(["git", "rev-parse", "HEAD"], cwd=repo)
+    head_actual = head_actual.strip() if code_head == 0 else ""
 
     anchor_tag = _find_latest_epoch_anchor_tag(repo)
 
@@ -107,12 +107,26 @@ def run_final_guardian_audit_v0_1(
 
     seal_ok = (seal_rc == 0) and ("[OK]" in seal_out or "Seal verification complete" in seal_out)
 
+    # --- seal target (10/10 coherence): in seal-only HEAD commits, verifier validates the introduced seal.
+    # We align repo.head to the commit whose seal was verified (last seal_<hash12>_... seen in output).
+    seal_h12 = ""
+    m = re.findall(r"seal_([0-9a-f]{12})_", seal_out)
+    if m:
+        seal_h12 = m[-1]
+    seal_target_full = ""
+    if seal_h12:
+        rc_t, out_t = _run(["git", "rev-parse", f"{seal_h12}^{{commit}}"], cwd=repo)
+        seal_target_full = out_t.strip() if rc_t == 0 else ""
+    head_for_report = seal_target_full or head_actual
+
     # --- build the report (deterministic ordering via sort_keys in JSON writer) ---
     report: Dict[str, Any] = {
         "a9_version": "0.1",
         "repo": {
             "root": str(repo).replace("\\", "/"),
-            "head": head,
+            "head": head_for_report,
+            "head_actual": head_actual,
+            "seal_target_hash12": seal_h12,
             "epoch_anchor_tag_latest": anchor_tag,
         },
         "checks": {

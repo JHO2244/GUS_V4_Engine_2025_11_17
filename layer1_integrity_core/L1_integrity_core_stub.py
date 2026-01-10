@@ -62,10 +62,39 @@ def _load_manifest() -> Dict[str, Any]:
 
 
 def _hash_file(path: Path) -> str:
+    """
+    Platform-stable hashing:
+    - If the file is tracked and not dirty, hash the committed blob bytes (git show HEAD:<path>).
+      This avoids CRLF/LF checkout differences across OS/CI.
+    - If the file is dirty/untracked, hash the working-tree bytes (tamper visibility locally).
+    """
+    import subprocess
+
+    rel = path.as_posix()
+
+    # If untracked, hash working tree
+    rc = subprocess.run(["git", "ls-files", "--error-unmatch", rel],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+    if rc != 0:
+        h = hashlib.sha256()
+        with path.open("rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    # If tracked but dirty, hash working tree
+    out = subprocess.check_output(["git", "status", "--porcelain", "--", rel], text=True).strip()
+    if out:
+        h = hashlib.sha256()
+        with path.open("rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    # Tracked + clean => hash committed blob bytes
+    blob = subprocess.check_output(["git", "show", f"HEAD:{rel}"])
     h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
+    h.update(blob)
     return h.hexdigest()
 
 
