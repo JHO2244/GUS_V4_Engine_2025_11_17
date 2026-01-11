@@ -238,6 +238,10 @@ def main() -> int:
 
     args = ap.parse_args()
 
+    # Fail-closed: contradictory flag combos must hard-stop (Diamond invariant).
+    if args.no_sig and (args.sig_strict or args.sig_relaxed):
+        raise SystemExit(f"{sym('fail')} invalid flags: --no-sig cannot be combined with --sig-strict/--sig-relaxed")
+
     # Alias: strict HEAD => require_target on HEAD
     if args.require_head:
         args.head = True

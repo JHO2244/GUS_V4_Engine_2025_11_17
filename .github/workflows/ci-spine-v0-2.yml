@@ -66,7 +66,7 @@ jobs:
         run: |
           echo "Anchor tag: $ANCHOR_TAG"
           echo "Anchor sha: $ANCHOR_SHA"
-          python -m scripts.verify_repo_seals --sha "$ANCHOR_SHA" --no-sig --sig-strict --ci
+          python -m scripts.verify_repo_seals --sha "$ANCHOR_SHA" --no-sig --ci
 
       - name: Install CI dependencies
         run: |
