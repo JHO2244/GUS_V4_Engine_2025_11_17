@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+
+from utils.canonical_json import write_canonical_json_file
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
@@ -22,4 +24,4 @@ class AttestationBundleV03:
         safe_payload = dict(payload)
         safe_payload["schema_version"] = self.schema_version
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps(safe_payload, indent=2, sort_keys=True), encoding="utf-8")
+        write_canonical_json_file(out_path, safe_payload)
