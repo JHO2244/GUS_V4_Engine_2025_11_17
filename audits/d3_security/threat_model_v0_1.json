@@ -1,0 +1,39 @@
+{
+  "created_at_utc": "2026-01-11T09:19:27Z",
+  "d3_version": "0.1",
+  "schema_version": "0.1",
+  "threats": [
+    {
+      "containment": [],
+      "description": "Legitimate contributor attempts subtle drift or policy weakening while preserving apparent functionality.",
+      "detection": [],
+      "id": "D3-T01",
+      "name": "Insider Guardian Attack",
+      "recovery": []
+    },
+    {
+      "containment": [],
+      "description": "Modified Python/pip/git behavior or compromised environment alters outputs or verification results.",
+      "detection": [],
+      "id": "D3-T02",
+      "name": "Toolchain Poisoning",
+      "recovery": []
+    },
+    {
+      "containment": [],
+      "description": "Replay of old seals/epochs or rollback attempts to reintroduce previously valid artifacts.",
+      "detection": [],
+      "id": "D3-T03",
+      "name": "Time-Shift Attacks",
+      "recovery": []
+    },
+    {
+      "containment": [],
+      "description": "Same dependency name/version resolves to different behavior across installs or time.",
+      "detection": [],
+      "id": "D3-T04",
+      "name": "Supply-Chain Shape-Shifting",
+      "recovery": []
+    }
+  ]
+}
