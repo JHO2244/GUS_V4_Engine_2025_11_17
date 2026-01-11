@@ -27,7 +27,7 @@ def test_d5_leakage_audit_shape_and_rules() -> None:
     assert isinstance(data["created_at_utc"], str) and data["created_at_utc"].endswith("Z")
 
     checks = data["checks"]
-    assert isinstance(checks, list) and len(checks) >= 3
+    assert isinstance(checks, list) and len(checks) >= 4
 
     allowlisted_note_pat = re.compile(r"(offline_private_key|No secret material in repo|no secrets)")
     for c in checks:
