@@ -89,10 +89,8 @@ attestations/*.json
 # allow canonical helper scripts
 !scripts/epoch_lock_prep.sh
 
-layer8_audit_ledger/gus_v4_audit_ledger.json
 
 # Runtime audit outputs (ephemeral)
-audits/
 audits/a9_final_guardian_audit_v0_1.json
 
 # D5 privacy: IDE metadata (machine paths)
