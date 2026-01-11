@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# Repo-root import safety (world-facing script invariant)
+import sys
+from pathlib import Path as _Path
+ROOT = _Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 import json
 import sys
 from datetime import datetime, timezone
