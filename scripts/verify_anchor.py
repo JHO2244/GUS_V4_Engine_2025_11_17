@@ -124,7 +124,6 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--sha",
         anchor_sha12,
         "--no-sig",
-        "--sig-strict",
         "--ci",
     ]
     rc = subprocess.call(cmd)
