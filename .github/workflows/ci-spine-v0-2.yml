@@ -81,4 +81,24 @@ jobs:
       - name: Run Tests
         run: |
           python -m pytest -q
-      
+
+      - name: Run unit tests
+        run: pytest -q
+
+      - name: Fail if working tree is dirty
+        shell: bash
+        run: |
+          echo "== git status --porcelain =="
+          git status --porcelain || true
+
+          echo "== git diff --name-status =="
+          git diff --name-status || true
+
+          echo "== git diff (summary) =="
+          git diff --stat || true
+
+          dirty="$(git status --porcelain)"
+          if [ -n "$dirty" ]; then
+            echo "::error::Working tree is dirty after CI steps. Commit generated files or fix the generator."
+            exit 1
+          fi
