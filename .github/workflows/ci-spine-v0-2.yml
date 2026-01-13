@@ -12,7 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout (PR head)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Checkout (push)
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -37,7 +45,8 @@ jobs:
             PR_SHA="${{ github.event.pull_request.head.sha }}"
             echo "PR run: verify PR head SHA (not merge ref)"
             echo "PR_SHA=$PR_SHA"
-            python -m scripts.verify_repo_seals --sha "$PR_SHA" --require-target --no-sig --ci
+git checkout "$PR_SHA"
+            python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
             exit 0
           fi
 
