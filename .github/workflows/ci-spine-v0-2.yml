@@ -22,93 +22,23 @@ on:
   pull_request:
     branches: [ main ]
 
-
 jobs:
   integrity:
     runs-on: ubuntu-latest
+    env:
+      GUS_CI: "1"
 
     steps:
-      - name: Checkout (PR head)
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Checkout (PR head or push SHA)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-
-      - name: Checkout (push)
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: actions/checkout@v4
-        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-
-      - name: Install minimal crypto dependency
-        run: |
-          python -m pip install --upgrade pip
-          pip install cryptography
-
-      - name: Seal verification (PR-safe)
-        shell: bash
-        run: |
-          set -euo pipefail
-          git rev-parse HEAD
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR_SHA="${{ github.event.pull_request.head.sha }}"
-            echo "PR run: verify PR head SHA (not merge ref)"
-            echo "PR_SHA=$PR_SHA"
-git checkout "$PR_SHA"
-            python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
-            exit 0
-          fi
-
-          echo "Push run: verify HEAD + parents (merge-safe)"
-          PARENTS_LINE="$(git rev-list --parents -n 1 HEAD)"
-          echo "PARENTS_LINE=$PARENTS_LINE"
-          P1="$(echo "$PARENTS_LINE" | awk '{print $2}')"
-          P2="$(echo "$PARENTS_LINE" | awk '{print $3}')"
-          if [ -n "${P2:-}" ]; then
-            echo "Merge commit detected — verifying both parents"
-            python -m scripts.verify_repo_seals --sha "$P1" --no-sig --ci
-            python -m scripts.verify_repo_seals --sha "$P2" --no-sig --ci
-          else
-            echo "Not a merge commit — parent check skipped"
-          fi
-          python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
-
-      - name: Epoch Enforcement Tier (STRICT only when labeled)
-        if: ${{ github.event_name == 'pull_request' && (contains(join(github.event.pull_request.labels.*.name, ','), 'epoch-lock-required') || contains(join(github.event.pull_request.labels.*.name, ','), 'milestone')) }}
-        run: |
-          echo "🧱 STRICT MODE: exact HEAD seal required (label-gated)"
-          python -m scripts.verify_repo_seals --head --require-head --no-sig
-
-      - name: Verify Anchor (content-only seal presence for anchor SHA)
-        run: |
-          python -m scripts.verify_anchor
-
-      - name: Extract Anchor SHA
-        run: |
-          ANCHOR_TAG="$(git tag --list 'epoch_*_anchor_*' | sort | tail -n 1)"
-          echo "ANCHOR_TAG=$ANCHOR_TAG" >> $GITHUB_ENV
-          echo "ANCHOR_SHA=$(git rev-list -n 1 "$ANCHOR_TAG")" >> $GITHUB_ENV
-
-      - name: Verify Anchor Seal (content-only; strict cleanliness rules)
-        run: |
-          echo "Anchor tag: $ANCHOR_TAG"
-          echo "Anchor sha: $ANCHOR_SHA"
-          python -m scripts.verify_repo_seals --sha "$ANCHOR_SHA" --no-sig --sig-strict --ci
-
-
-
-      - name: Checkout (push)
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install CI dependencies
         run: |
@@ -120,7 +50,14 @@ git checkout "$PR_SHA"
             echo "No requirements.txt found; skipping."
           fi
 
+      - name: Verify HEAD seal (authoritative script)
+        run: |
+          python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
+
+      - name: Verify latest epoch anchor (authoritative script)
+        run: |
+          python -m scripts.verify_anchor
+
       - name: Run Tests
         run: |
           python -m pytest -q
-
