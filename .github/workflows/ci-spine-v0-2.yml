@@ -75,6 +75,19 @@ jobs:
           echo "Anchor sha: $ANCHOR_SHA"
           python -m scripts.verify_repo_seals --sha "$ANCHOR_SHA" --no-sig --sig-strict --ci
 
+      - name: Checkout (PR head)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Checkout (push)
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Install CI dependencies
         run: |
           python -m pip install --upgrade pip
