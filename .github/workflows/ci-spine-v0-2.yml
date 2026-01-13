@@ -1,5 +1,21 @@
 name: GUS CI Spine v0.2
 
+# ------------------------------------------------------------
+# AUTHORITY DECLARATION (GDVS)
+#
+# This workflow is NON-AUTHORITATIVE.
+# It MUST NOT encode security, integrity, or sealing logic.
+#
+# Authoritative sources:
+#   - scripts/verify_repo_seals.py
+#   - scripts/seal_snapshot.py
+#   - scripts/verify_epoch_anchor.py
+#   - scripts/verify_anchor.py
+#
+# CI is a transport + invocation layer ONLY.
+# Any rule change MUST occur in the scripts, not here.
+# ------------------------------------------------------------
+
 on:
   push:
     branches: [ main ]
