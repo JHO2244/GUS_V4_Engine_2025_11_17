@@ -238,6 +238,10 @@ def main() -> int:
 
     args = ap.parse_args()
 
+    # Fail-closed: contradictory flag combos must hard-stop (Diamond invariant).
+    if args.no_sig and (args.sig_strict or args.sig_relaxed):
+        raise SystemExit(f"{sym('fail')} invalid flags: --no-sig cannot be combined with --sig-strict/--sig-relaxed")
+
     # Alias: strict HEAD => require_target on HEAD
     if args.require_head:
         args.head = True
@@ -292,6 +296,44 @@ def main() -> int:
                 raise SystemExit(f"{sym('fail')} No seal found for {who} (searched {target} and ancestors)")
             nearest_hs, seal_path = found
             print(f"{sym('arrow')} NOTE: {who} {hs} has no seal; using nearest sealed ancestor {nearest_hs}")
+
+        # CI exception: GitHub often tests a synthetic MERGE commit (not sealable).
+        # In CI + require-head mode, allow an unsealed merge HEAD *only if* both parents
+        # (or their nearest sealed ancestors) verify OK.
+        if (
+            (seal_path is None)
+            and args.ci
+            and (not args.sha)
+            and args.require_target
+        ):
+            parents = sh(["git", "rev-list", "--parents", "-n", "1", "HEAD"]).split()
+            # parents[0] is HEAD sha, parents[1:], if len>=3 => merge commit
+            if len(parents) >= 3:
+                parent_shas = parents[1:]
+                print(f"{sym('arrow')} Merge commit detected — verifying parent seals (CI merge-safe)")
+
+                for psha in parent_shas:
+                    p12 = sh(["git", "rev-parse", "--short=12", psha])
+                    pseal = find_latest_seal_for_short_hash(seals, p12)
+
+                    if pseal is None:
+                        found = find_nearest_seal(seals, psha, search_limit=50)
+                        if not found:
+                            raise SystemExit(f"{sym('fail')} Merge parent {p12} has no seal (and no sealed ancestor)")
+                        nearest12, pseal = found
+                        print(f"{sym('arrow')} NOTE: parent {p12} has no seal; using nearest sealed ancestor {nearest12}")
+
+                    verify_one(
+                        pseal,
+                        verify_sig=verify_sig,
+                        pubkey=pubkey,
+                        allow_dirty_to_verify_seal=allow_dirty_to_verify_seal,
+                        allow_missing_sig=allow_missing_sig,
+                    )
+
+                print(f"{sym('check')} CI merge-safe: parents verified; allowing unsealed merge HEAD.")
+                print(f"{sym('check')} Seal verification complete.")
+                return 0
 
         # Strict target required and still no seal => handle seal-only HEAD exception
         if (seal_path is None) and (not args.sha) and args.require_target and head_is_seal_only_commit():

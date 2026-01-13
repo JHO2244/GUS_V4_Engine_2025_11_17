@@ -124,7 +124,6 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--sha",
         anchor_sha12,
         "--no-sig",
-        "--sig-strict",
         "--ci",
     ]
     rc = subprocess.call(cmd)
@@ -137,7 +136,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         "anchor_sha": anchor_sha,
         "anchor_sha12": anchor_sha12,
         "verified": "PASS" if verified else "FAIL",
-        "verification_cmd": "python -m scripts.verify_repo_seals --sha <ANCHOR_SHA12> --no-sig --sig-strict --ci",
+        "verification_cmd": "python -m scripts.verify_repo_seals --sha <ANCHOR_SHA12> --no-sig --ci",
         "original_head_sha12": original_head12,
     }
 

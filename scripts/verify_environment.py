@@ -82,7 +82,7 @@ def check_os_info() -> EnvCheckResult:
 
 
 def check_venv_active() -> EnvCheckResult:
-    in_venv = getattr(sys, "base_prefix", sys.prefix) != sys.prefix
+    in_venv = sys.prefix != getattr(sys, "base_prefix", sys.prefix)
     severity = Severity.INFO if in_venv else Severity.WARN
 
     return EnvCheckResult(
