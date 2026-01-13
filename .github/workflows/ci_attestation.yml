@@ -51,12 +51,20 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pytest cryptography
 
-      - name: Merge-safe seal verification (HEAD + parents)
+      - name: Seal verification (PR-safe)
         shell: bash
         run: |
           source venv/Scripts/activate
           set -euo pipefail
           git rev-parse HEAD
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "PR run: verify HEAD only (no parent sealing requirement)"
+            python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
+            exit 0
+          fi
+
+          echo "Push run: verify HEAD + parents (merge-safe)"
           PARENTS_LINE="$(git rev-list --parents -n 1 HEAD)"
           echo "PARENTS_LINE=$PARENTS_LINE"
           P1="$(echo "$PARENTS_LINE" | awk '{print $2}')"
@@ -68,8 +76,8 @@ jobs:
           else
             echo "Not a merge commit — parent check skipped"
           fi
-          echo "Verifying HEAD with merge-safe seal-only policy"
           python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
+
 
       - name: Attestation — tests
         shell: bash
