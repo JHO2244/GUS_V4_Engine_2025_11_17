@@ -62,11 +62,27 @@ def _load_manifest() -> Dict[str, Any]:
 
 
 def _hash_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    """
+    Deterministic file hashing across OS / checkout policies.
+
+    Text files:
+      - decode as UTF-8 (strict). If that works, normalize CRLF -> LF and hash bytes.
+    Binary files:
+      - hash raw bytes.
+    """
+    data = path.read_bytes()
+
+    # Text-normalization path (UTF-8 strict)
+    try:
+        txt = data.decode("utf-8")  # strict
+    except UnicodeDecodeError:
+        # Binary: raw bytes hash
+        return hashlib.sha256(data).hexdigest()
+
+    # Normalize line endings for cross-platform stability
+    norm = txt.replace("\r\n", "\n").encode("utf-8")
+    return hashlib.sha256(norm).hexdigest()
+
 
 
 def verify_integrity() -> Tuple[bool, List[IntegrityIssue]]:

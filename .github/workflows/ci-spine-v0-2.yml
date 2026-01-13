@@ -12,7 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout (PR head)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Checkout (push)
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -27,11 +35,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install cryptography
 
-      - name: Merge-safe seal verification (HEAD + parents)
+      - name: Seal verification (PR-safe)
         shell: bash
         run: |
           set -euo pipefail
           git rev-parse HEAD
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_SHA="${{ github.event.pull_request.head.sha }}"
+            echo "PR run: verify PR head SHA (not merge ref)"
+            echo "PR_SHA=$PR_SHA"
+git checkout "$PR_SHA"
+            python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
+            exit 0
+          fi
+
+          echo "Push run: verify HEAD + parents (merge-safe)"
           PARENTS_LINE="$(git rev-list --parents -n 1 HEAD)"
           echo "PARENTS_LINE=$PARENTS_LINE"
           P1="$(echo "$PARENTS_LINE" | awk '{print $2}')"
@@ -43,7 +62,6 @@ jobs:
           else
             echo "Not a merge commit — parent check skipped"
           fi
-          echo "Verifying HEAD with merge-safe seal-only policy"
           python -m scripts.verify_repo_seals --head --require-head --no-sig --ci
 
       - name: Epoch Enforcement Tier (STRICT only when labeled)
@@ -68,6 +86,14 @@ jobs:
           echo "Anchor sha: $ANCHOR_SHA"
           python -m scripts.verify_repo_seals --sha "$ANCHOR_SHA" --no-sig --sig-strict --ci
 
+
+
+      - name: Checkout (push)
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Install CI dependencies
         run: |
           python -m pip install --upgrade pip
@@ -80,5 +106,5 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest -q
-      
+          python -m pytest -q
+

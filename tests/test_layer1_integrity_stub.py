@@ -87,3 +87,11 @@ def test_load_integrity_status_persists_snapshot(tmp_path, monkeypatch):
     snapshot = json.loads(status_path.read_text(encoding="utf-8"))
     assert snapshot["overall_ok"] is True
     assert snapshot["files"], "snapshot should contain at least one file entry"
+
+
+def test_repo_l1_manifest_baseline_verifies_ok():
+    # This is the repo's non-negotiable integrity gate:
+    # The baseline manifest must verify clean on an untampered working tree.
+    ok, issues = verify_integrity()
+    assert ok is True, f"Repo L1 manifest baseline failed: {issues}"
+    assert issues == []
