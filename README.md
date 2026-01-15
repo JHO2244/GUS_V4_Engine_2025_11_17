@@ -67,3 +67,7 @@ GUS integrity tooling must be executed in a deterministic Python context.
 Epoch anchors are history.
 HEAD seals are proof-of-now.
 Proof-of-now never pollutes history.
+
+LOCKED: GUS v4 is FINAL and IMMUTABLE.
+No further changes, extensions, or seals are permitted on v4.
+All evolution continues in v5+ containers only.
