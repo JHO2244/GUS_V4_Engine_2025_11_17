@@ -2,6 +2,8 @@
 
 WARNING: GUS v4 is ENGINE-ONLY: non-interactive, non-configurable, immutable by design.
 
+WARNING: GUS v4 CORE is frozen (GDVS + sealing + invariants + policy spine + determinism + refusal). Only v5+ may change semantics.
+
 [![GUS v4 — CI Attestation](https://github.com/JHO2244/GUS_V4_Engine_2025_11_17/actions/workflows/ci_attestation.yml/badge.svg?branch=main)](https://github.com/JHO2244/GUS_V4_Engine_2025_11_17/actions/workflows/ci_attestation.yml)
 
 Commit: 3205b5e3972d8b4393d3a5d779675f67affedb78
