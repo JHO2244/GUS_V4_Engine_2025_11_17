@@ -9,9 +9,13 @@ from scripts.verify_seal import verify_seal
 
 
 def _git(repo: Path, *args: str) -> str:
-    out = subprocess.check_output(["git", "-C", str(repo), *args], text=True)
+    out = subprocess.check_output(
+        ["git", "-C", str(repo), *args],
+        stdin=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
     return out.strip()
-
 
 @pytest.fixture()
 def mini_repo(tmp_path: Path) -> Path:

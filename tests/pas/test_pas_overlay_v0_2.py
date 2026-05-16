@@ -9,6 +9,7 @@ def test_pas_status_module_runs_ok_and_prints_once():
     proc = subprocess.run(
         [sys.executable, "-m", "scripts.pas_status"],
         capture_output=True,
+        stdin=subprocess.DEVNULL,
         text=True,
         encoding="utf-8",
         errors="replace"
