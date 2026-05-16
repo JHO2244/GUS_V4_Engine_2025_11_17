@@ -33,6 +33,7 @@ def _run(cmd: List[str], cwd: Path) -> Tuple[int, str]:
         cmd,
         cwd=str(cwd),
         stdout=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
         text=True,
         encoding="utf-8",

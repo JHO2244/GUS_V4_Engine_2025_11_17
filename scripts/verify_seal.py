@@ -48,7 +48,8 @@ def _run_git(repo_root: str, args: List[str]) -> str:
     try:
         out = subprocess.check_output(
             ["git", "-C", repo_root] + args,
-            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             text=True,
         )
         return out.strip()
@@ -80,7 +81,8 @@ def _git_show_file(repo_root: str, rev: str, relpath: str) -> bytes:
     try:
         out = subprocess.check_output(
             ["git", "-C", repo_root, "show", f"{rev}:{relpath}"],
-            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         return out
     except subprocess.CalledProcessError as e:
@@ -93,7 +95,8 @@ def _detect_repo_root(start: Optional[str] = None) -> str:
     try:
         root = subprocess.check_output(
             ["git", "-C", start, "rev-parse", "--show-toplevel"],
-            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
         if not root:

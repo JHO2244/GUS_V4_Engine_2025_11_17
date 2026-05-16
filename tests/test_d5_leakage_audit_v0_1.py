@@ -7,7 +7,7 @@ from pathlib import Path
 def _grep(pattern: str, paths: list[str]) -> list[str]:
     # Use git grep for tracked content determinism.
     cmd = ["git", "grep", "-nI", "-E", pattern, "--"] + paths
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL, stderr=subprocess.STDOUT, text=True)
     out = proc.stdout.strip()
     if proc.returncode == 1:  # no matches
         return []

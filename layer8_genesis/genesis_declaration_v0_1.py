@@ -14,7 +14,12 @@ def _utc_now_iso() -> str:
 
 
 def _run_git(args: List[str]) -> str:
-    out = subprocess.check_output(["git", *args], text=True).strip()
+    out = subprocess.check_output(
+        ["git", *args],
+        stdin=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    ).strip()
     return out
 
 
